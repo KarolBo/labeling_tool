@@ -19,3 +19,4 @@ class mpl_widget(QWidget):
         self.canvas.axes.axis('off')
         self.setLayout(vertical_layout)
 
+        self.setMouseTracking(True)

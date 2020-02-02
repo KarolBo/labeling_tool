@@ -1,3 +1,4 @@
+#!/
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QPushButton, QHeaderView
 from PyQt5.QtGui import QIntValidator
 from PyQt5.uic import loadUi
@@ -38,6 +39,8 @@ class MainWindow(QMainWindow):
         self.target_folder = ''
         self.file_extension = 'dcm'
         self.img_idx = 0
+        self.x = None
+        self.y = None
 
         self.connect_signals()
 
@@ -47,6 +50,11 @@ class MainWindow(QMainWindow):
         self.button_confirm.clicked.connect(self.set_categories)
         self.checkbox_class.stateChanged.connect(self.on_checkbox)
         self.checkbox_object.stateChanged.connect(self.on_checkbox)
+        
+        self.screen.canvas.mouseMoveEvent = self.mouse_move
+        self.screen.canvas.mousePressEvent = self.mouse_press
+        # self.screen.canvas.mousePressEvent = self.mouse_release
+        self.screen.canvas.setMouseTracking(False)
 
     @handle_exceptions
     def display(self, image):
@@ -117,6 +125,7 @@ class MainWindow(QMainWindow):
             if not isdir(folder_name):
                 mkdir(folder_name)
 
+    @handle_exceptions
     def add_rows(self, n):
         for i in range(n):
             self.table.insertRow(self.table.rowCount())
@@ -137,6 +146,7 @@ class MainWindow(QMainWindow):
         if self.img_idx:
             self.display_next()
 
+    @handle_exceptions
     def keyPressEvent(self, event):
         class_num = event.key() - 48
         if class_num < int(self.num_of_classes.text()):
@@ -167,12 +177,25 @@ class MainWindow(QMainWindow):
             self.point.setEnabled(False)
             self.box.setEnabled(False)
 
+    @handle_exceptions
     def line_select_callback(self, eclick, erelease):
         x1, y1 = eclick.xdata, eclick.ydata
         x2, y2 = erelease.xdata, erelease.ydata
 
         rect = plt.Rectangle((min(x1, x2), min(y1, y2)), np.abs(x1 - x2), np.abs(y1 - y2))
         self.screen.canvas.axes.add_patch(rect)
+
+    @handle_exceptions
+    def mouse_move(self, event):
+        x = event.x()
+        y = event.y()
+        dx = x - self.x
+        dy = y - self.y
+        print(dx, dy)
+
+    def mouse_press(self, event):
+        self.x = event.x()
+        self.y = event.y()
 
 
 
