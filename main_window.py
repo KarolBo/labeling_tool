@@ -41,6 +41,9 @@ class MainWindow(QMainWindow):
         self.img_idx = 0
         self.x = None
         self.y = None
+        self.val_min = None
+        self.val_max = None
+        self.data_array = None
 
         self.connect_signals()
 
@@ -57,9 +60,18 @@ class MainWindow(QMainWindow):
         self.screen.canvas.setMouseTracking(False)
 
     @handle_exceptions
-    def display(self, image):
+    def display_next(self):
+        if self.image_list:
+            dcm_file = pydicom.dcmread(self.image_list[self.img_idx])
+            self.data_array = dcm_file.pixel_array
+            self.set_window(dcm_file)
+            self.display()
+
+    @handle_exceptions
+    def display(self):
         self.screen.canvas.axes.clear()
-        self.screen.canvas.axes.imshow(image, cmap='gray')
+        self.screen.canvas.axes.imshow(self.data_array, cmap='gray', 
+                                       vmin=self.val_min, vmax=self.val_max)
         self.screen.canvas.axes.axis('off')
         self.screen.canvas.draw()
         self.label_image_num.setText(str(self.img_idx+1)+' / '+str(len(self.image_list)))
@@ -86,11 +98,18 @@ class MainWindow(QMainWindow):
         print('target folder:', self.target_folder)
 
     @handle_exceptions
-    def display_next(self):
-        if self.image_list:
-            dcm_file = pydicom.dcmread(self.image_list[self.img_idx])
-            data_array = dcm_file.pixel_array
-            self.display(data_array)
+    def set_window(self, dcm_file):
+        if "WindowCenter" in dcm_file and "WindowWidth" in dcm_file:
+            windowCenter = dcm_file.WindowCenter
+            windowWidth = dcm_file.WindowWidth
+            if isinstance(windowCenter, pydicom.multival.MultiValue):
+                windowCenter = windowCenter[0]
+                windowWidth = windowWidth[0]
+            self.val_min = windowCenter - 0.5 * windowWidth
+            self.val_max = windowCenter + 0.5 * windowWidth
+        else:
+            self.val_min = None
+            self.val_max = None
 
     @handle_exceptions
     def classify(self, class_nr):
@@ -187,11 +206,17 @@ class MainWindow(QMainWindow):
 
     @handle_exceptions
     def mouse_move(self, event):
+        sens = 3
         x = event.x()
         y = event.y()
         dx = x - self.x
         dy = y - self.y
-        print(dx, dy)
+        if self.val_max + sens*dy - self.val_min - sens*dx > 0:
+            self.val_min += sens*dx
+            self.val_max += sens*dy
+        self.display()
+        self.x = x
+        self.y = y
 
     def mouse_press(self, event):
         self.x = event.x()
