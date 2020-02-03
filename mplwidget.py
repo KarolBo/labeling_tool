@@ -96,10 +96,9 @@ class MplWidget(QWidget):
         self.x = event.xdata
         self.y = event.ydata
         if self.mode == Mode.point:
-            self.location = (self.x, self.y)
+            x = self.x / self.data_array.shape[1]
+            y = self.y / self.data_array.shape[0]
+            self.location = (x, y)
             self.display()
             self.canvas.axes.scatter(self.x, self.y)
             self.canvas.draw()
-
-    def save_location(self, path):
-        pass

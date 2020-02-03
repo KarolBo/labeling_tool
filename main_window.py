@@ -5,7 +5,7 @@ from glob import glob
 from os.path import join, isdir, basename
 from os import mkdir
 import sys
-from PyQt5.QtCore import pyqtSlot, Qt
+from PyQt5.QtCore import pyqtSlot
 import pydicom
 from shutil import copyfile
 import functools
@@ -37,6 +37,8 @@ class MainWindow(QMainWindow):
         self.target_folder = ''
         self.file_extension = 'dcm'
         self.img_idx = 0
+        self.classified = False
+        self.located = False
 
         self.connect_signals()
 
@@ -49,6 +51,7 @@ class MainWindow(QMainWindow):
         self.checkbox_object.stateChanged.connect(self.on_checkbox)
         self.box.clicked.connect(self.on_toggle)
         self.point.clicked.connect(self.on_toggle)
+        self.button_save_roi.clicked.connect(self.save_location)
 
     @handle_exceptions
     def display_next(self):
@@ -103,12 +106,17 @@ class MainWindow(QMainWindow):
             target_path = join(self.target_folder, str(class_nr), src_path.split('/')[-1])
             copyfile(src_path, target_path)
             self.img_idx += 1
-            self.display_next()
+            self.classified = True
+            if self.is_ready():
+                self.display_next()
 
     @pyqtSlot()
     @handle_exceptions
     def set_categories(self):
-        n = int(self.num_of_classes.text())
+        if self.num_of_classes().text():
+            n = int(self.num_of_classes.text())
+        else:
+            n = 0
         self.create_buttons(n)
         self.create_folders(n)
         self.check_folders(n)
@@ -152,7 +160,7 @@ class MainWindow(QMainWindow):
     @handle_exceptions
     def keyPressEvent(self, event):
         class_num = event.key() - 48
-        if class_num < int(self.num_of_classes.text()):
+        if self.num_of_classes.text() and class_num < int(self.num_of_classes.text()):
             self.classify(class_num)
         event.accept()
 
@@ -186,6 +194,30 @@ class MainWindow(QMainWindow):
             self.screen.set_mode(3)
         else:
             self.screen.set_mode(2)
+
+    @pyqtSlot()
+    @handle_exceptions
+    def save_location(self):
+        path = join(self.target_folder, 'locations.csv')
+        with open(path, 'a+') as file:
+            filename = basename(self.image_list[self.img_idx])
+            location = str(self.screen.location).strip('()')
+            file.write(filename+','+location+'\n')
+        self.located = True
+        if self.is_ready():
+            self.display_next()
+
+    @handle_exceptions
+    def is_ready(self):
+        class_checked = self.checkbox_class.isChecked()
+        object_checked = self.checkbox_object.isChecked()
+
+        status = (self.classified or not class_checked) and (self.located or not object_checked)
+        return status
+
+
+
+
 
 
 ##########################################################################################
