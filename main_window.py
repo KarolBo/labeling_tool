@@ -47,6 +47,8 @@ class MainWindow(QMainWindow):
         self.button_confirm.clicked.connect(self.set_categories)
         self.checkbox_class.stateChanged.connect(self.on_checkbox)
         self.checkbox_object.stateChanged.connect(self.on_checkbox)
+        self.box.clicked.connect(self.on_toggle)
+        self.point.clicked.connect(self.on_toggle)
 
     @handle_exceptions
     def display_next(self):
@@ -159,6 +161,7 @@ class MainWindow(QMainWindow):
     def on_checkbox(self):
         class_checked = self.checkbox_class.isChecked()
         object_checked = self.checkbox_object.isChecked()
+        box_checked = self.box.isChecked()
 
         self.label.setEnabled(class_checked)
         self.num_of_classes.setEnabled(class_checked)
@@ -167,7 +170,22 @@ class MainWindow(QMainWindow):
 
         self.point.setEnabled(object_checked)
         self.box.setEnabled(object_checked)
-        self.screen.set_roi_selection(object_checked)
+
+        if not object_checked:
+            self.screen.set_mode(1)
+        elif box_checked:
+            self.screen.set_mode(3)
+        else:
+            self.screen.set_mode(2)
+
+    @pyqtSlot()
+    @handle_exceptions
+    def on_toggle(self):
+        box_checked = self.box.isChecked()
+        if box_checked:
+            self.screen.set_mode(3)
+        else:
+            self.screen.set_mode(2)
 
 
 ##########################################################################################

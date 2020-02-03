@@ -2,9 +2,17 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.widgets import RectangleSelector
+from matplotlib.patches import Circle
 from main_window import handle_exceptions
+from enum import Enum
 
-    
+
+class Mode(Enum):
+    window = 1
+    point = 2
+    roi = 3
+
+
 class MplWidget(QWidget):
 
     @handle_exceptions
@@ -32,6 +40,7 @@ class MplWidget(QWidget):
 
         self.rs = None
         self.roi = None
+        self.mode = Mode.window
 
     @handle_exceptions
     def display(self):
@@ -42,14 +51,16 @@ class MplWidget(QWidget):
         self.canvas.draw()
 
     @handle_exceptions
-    def set_roi_selection(self, state):
-        if state:
+    def set_mode(self, n):
+        new_mode = Mode(n)
+        if new_mode==Mode.window or new_mode==Mode.point:
+            self.rs = None
+            self.roi = None
+        elif new_mode==Mode.roi:
             self.rs = RectangleSelector(self.canvas.axes, self.roi_select,
                                         drawtype='box', useblit=False, button=[1],
                                         minspanx=5, minspany=5, spancoords='pixels', interactive=True)
-        else:
-            self.rs = None
-            self.roi = None
+        self.mode = new_mode
 
     @handle_exceptions
     def roi_select(self, click, release):
@@ -63,7 +74,7 @@ class MplWidget(QWidget):
 
     @handle_exceptions
     def mouse_move(self, event):
-        if self.rs is None:
+        if self.mode == Mode.window:
             sens = 2.5
             x = event.x()
             y = event.y()
@@ -83,7 +94,9 @@ class MplWidget(QWidget):
 
     @handle_exceptions
     def mouse_press(self, event):
-        if self.rs is None:
-            self.x = event.x()
-            self.y = event.y()
+        self.x = event.x()
+        self.y = event.y()
+        if self.mode == Mode.point:
+            circle = Circle((self.x, self.y), radius=10)
+            self.canvas.axes.add_patch(circle)
         super(FigureCanvas, self.canvas).mousePressEvent(event)

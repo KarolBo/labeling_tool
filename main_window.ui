@@ -147,6 +147,12 @@
           <property name="text">
            <string>point</string>
           </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+          <attribute name="buttonGroup">
+           <string notr="true">buttonGroup</string>
+          </attribute>
          </widget>
         </item>
         <item>
@@ -157,9 +163,19 @@
           <property name="text">
            <string>box</string>
           </property>
+          <attribute name="buttonGroup">
+           <string notr="true">buttonGroup</string>
+          </attribute>
          </widget>
         </item>
        </layout>
+      </item>
+      <item>
+       <widget class="QPushButton" name="button_save_roi">
+        <property name="text">
+         <string>Save ROI</string>
+        </property>
+       </widget>
       </item>
       <item>
        <spacer name="verticalSpacer">
@@ -175,6 +191,13 @@
        </spacer>
       </item>
      </layout>
+    </item>
+    <item row="2" column="1">
+     <widget class="QPushButton" name="button_skip">
+      <property name="text">
+       <string>Skip</string>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>
@@ -239,4 +262,7 @@
  </customwidgets>
  <resources/>
  <connections/>
+ <buttongroups>
+  <buttongroup name="buttonGroup"/>
+ </buttongroups>
 </ui>
