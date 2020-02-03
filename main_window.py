@@ -2,8 +2,8 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QPushButton,
 from PyQt5.QtGui import QIntValidator
 from PyQt5.uic import loadUi
 from glob import glob
-from os.path import join, isdir, basename
-from os import mkdir
+from os.path import join, isdir, basename, isfile
+from os import mkdir, remove
 import sys
 from PyQt5.QtCore import pyqtSlot
 import pydicom
@@ -17,6 +17,7 @@ def handle_exceptions(func):
         try:
             return func(*args, **kwargs)
         except Exception as e:
+            print('Exception in {}:'.format(func.__name__))
             print(e)
             return None
     return func_wrapper
@@ -52,7 +53,10 @@ class MainWindow(QMainWindow):
         self.box.clicked.connect(self.on_toggle)
         self.point.clicked.connect(self.on_toggle)
         self.button_save_roi.clicked.connect(self.save_location)
+        self.button_skip.clicked.connect(self.display_next)
+        self.button_back.clicked.connect(self.get_back)
 
+    @pyqtSlot()
     @handle_exceptions
     def display_next(self):
         if self.image_list:
@@ -60,7 +64,10 @@ class MainWindow(QMainWindow):
             self.screen.data_array = dcm_file.pixel_array
             self.screen.val_min, self.screen.val_max = self.get_window(dcm_file)
             self.screen.display()
-            self.label_image_num.setText(str(self.img_idx + 1) + ' / ' + str(len(self.image_list)))
+            self.img_idx += 1
+            self.label_image_num.setText(str(self.img_idx) + ' / ' + str(len(self.image_list)))
+            self.located = self.classified = False
+            self.on_toggle()
 
     @handle_exceptions
     def get_window(self, dcm_file):
@@ -95,7 +102,6 @@ class MainWindow(QMainWindow):
         file_dialog = QFileDialog()
         file_dialog.setFileMode(QFileDialog.Directory)
         self.target_folder = str(file_dialog.getExistingDirectory(self))
-        self.img_idx += 0
         print('target folder:', self.target_folder)
 
     @handle_exceptions
@@ -105,7 +111,6 @@ class MainWindow(QMainWindow):
             src_path = self.image_list[self.img_idx]
             target_path = join(self.target_folder, str(class_nr), src_path.split('/')[-1])
             copyfile(src_path, target_path)
-            self.img_idx += 1
             self.classified = True
             if self.is_ready():
                 self.display_next()
@@ -113,7 +118,7 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     @handle_exceptions
     def set_categories(self):
-        if self.num_of_classes().text():
+        if self.num_of_classes.text():
             n = int(self.num_of_classes.text())
         else:
             n = 0
@@ -215,9 +220,39 @@ class MainWindow(QMainWindow):
         status = (self.classified or not class_checked) and (self.located or not object_checked)
         return status
 
+    @pyqtSlot()
+    @handle_exceptions
+    def get_back(self):
+        if self.num_of_classes.text():
+            n = int(self.num_of_classes.text())
+        else:
+            n = 0
+        file_name = basename(self.image_list[self.img_idx-1])
 
+        # remove file
+        for i in range(n):
+            file_path = join(self.target_folder, str(i), file_name)
+            print(file_path)
+            if isfile(file_path):
+                remove(file_path)
+                print('Removed {}'.format(file_path))
 
+        # remove location row
+        path = join(self.target_folder, 'locations.csv')
+        if isfile(path):
+            with open(path, "r") as f:
+                lines = f.readlines()
+            with open(path, "w") as f:
+                for line in lines:
+                    if file_name not in line:
+                        print(file_name)
+                        print(line)
+                        f.write(line)
 
+        # display previous image
+        if self.img_idx > 1:
+            self.img_idx -= 2
+            self.display_next()
 
 
 ##########################################################################################
