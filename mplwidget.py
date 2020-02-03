@@ -28,8 +28,8 @@ class MplWidget(QWidget):
         self.canvas.axes.axis('off')
         self.setLayout(vertical_layout)
 
-        self.canvas.mouseMoveEvent = self.mouse_move
-        self.canvas.mousePressEvent = self.mouse_press
+        self.canvas.mpl_connect('motion_notify_event', self.mouse_move)
+        self.canvas.mpl_connect('button_press_event', self.mouse_press)
         self.canvas.setMouseTracking(False)
 
         self.x = None
@@ -39,7 +39,7 @@ class MplWidget(QWidget):
         self.data_array = None
 
         self.rs = None
-        self.roi = None
+        self.location = None
         self.mode = Mode.window
 
     @handle_exceptions
@@ -53,10 +53,10 @@ class MplWidget(QWidget):
     @handle_exceptions
     def set_mode(self, n):
         new_mode = Mode(n)
-        if new_mode==Mode.window or new_mode==Mode.point:
+        if new_mode == Mode.window or new_mode == Mode.point:
             self.rs = None
-            self.roi = None
-        elif new_mode==Mode.roi:
+            self.location = None
+        elif new_mode == Mode.roi:
             self.rs = RectangleSelector(self.canvas.axes, self.roi_select,
                                         drawtype='box', useblit=False, button=[1],
                                         minspanx=5, minspany=5, spancoords='pixels', interactive=True)
@@ -70,14 +70,14 @@ class MplWidget(QWidget):
         h = abs(y1 - y2) / self.data_array.shape[0]
         x = min(x1, x2) / self.data_array.shape[1] + w / 2
         y = min(y1, y2) / self.data_array.shape[0] + h / 2
-        self.roi = (x, y, w, h)
+        self.location = (x, y, w, h)
 
     @handle_exceptions
     def mouse_move(self, event):
         if self.mode == Mode.window:
             sens = 2.5
-            x = event.x()
-            y = event.y()
+            x = event.xdata
+            y = event.ydata
             dx = x - self.x
             dy = y - self.y
             new_min = self.val_min + sens * dx
@@ -90,13 +90,16 @@ class MplWidget(QWidget):
                 self.display()
             self.x = x
             self.y = y
-        super(FigureCanvas, self.canvas).mouseMoveEvent(event)
 
     @handle_exceptions
     def mouse_press(self, event):
-        self.x = event.x()
-        self.y = event.y()
+        self.x = event.xdata
+        self.y = event.ydata
         if self.mode == Mode.point:
-            circle = Circle((self.x, self.y), radius=10)
-            self.canvas.axes.add_patch(circle)
-        super(FigureCanvas, self.canvas).mousePressEvent(event)
+            self.location = (self.x, self.y)
+            self.display()
+            self.canvas.axes.scatter(self.x, self.y)
+            self.canvas.draw()
+
+    def save_location(self, path):
+        pass
