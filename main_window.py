@@ -164,9 +164,12 @@ class MainWindow(QMainWindow):
 
     @handle_exceptions
     def keyPressEvent(self, event):
-        class_num = event.key() - 48
-        if self.num_of_classes.text() and class_num < int(self.num_of_classes.text()):
-            self.classify(class_num)
+        if event.key() == 16777219:
+            self.get_back()
+        else:
+            class_num = event.key() - 48
+            if self.num_of_classes.text() and class_num < int(self.num_of_classes.text()):
+                self.classify(class_num)
         event.accept()
 
     @pyqtSlot()
