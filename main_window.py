@@ -1,17 +1,14 @@
-#!/
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QPushButton, QHeaderView
 from PyQt5.QtGui import QIntValidator
 from PyQt5.uic import loadUi
 from glob import glob
 from os.path import join, isdir, basename
 from os import mkdir
+import sys
 from PyQt5.QtCore import pyqtSlot, Qt
 import pydicom
 from shutil import copyfile
 import functools
-import matplotlib as plt
-from matplotlib.widgets  import RectangleSelector
-import numpy as np
 
 
 def handle_exceptions(func):
@@ -26,10 +23,11 @@ def handle_exceptions(func):
 
 
 class MainWindow(QMainWindow):
-    
+
+    @handle_exceptions
     def __init__(self):
-        QMainWindow.__init__(self)
-        loadUi("main_window.ui",self)
+        super().__init__()
+        loadUi("main_window.ui", self)
         self.menuBar().setNativeMenuBar(False)
         self.setWindowTitle("The Most Awesome Labelling Tool in the World!")
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -39,42 +37,40 @@ class MainWindow(QMainWindow):
         self.target_folder = ''
         self.file_extension = 'dcm'
         self.img_idx = 0
-        self.x = None
-        self.y = None
-        self.val_min = None
-        self.val_max = None
-        self.data_array = None
 
         self.connect_signals()
 
+    @handle_exceptions
     def connect_signals(self):
         self.menu_open.triggered.connect(self.load_folder)
         self.menu_save.triggered.connect(self.set_target_folder)
         self.button_confirm.clicked.connect(self.set_categories)
         self.checkbox_class.stateChanged.connect(self.on_checkbox)
         self.checkbox_object.stateChanged.connect(self.on_checkbox)
-        
-        self.screen.canvas.mouseMoveEvent = self.mouse_move
-        self.screen.canvas.mousePressEvent = self.mouse_press
-        # self.screen.canvas.mousePressEvent = self.mouse_release
-        self.screen.canvas.setMouseTracking(False)
 
     @handle_exceptions
     def display_next(self):
         if self.image_list:
             dcm_file = pydicom.dcmread(self.image_list[self.img_idx])
-            self.data_array = dcm_file.pixel_array
-            self.set_window(dcm_file)
-            self.display()
+            self.screen.data_array = dcm_file.pixel_array
+            self.screen.val_min, self.screen.val_max = self.get_window(dcm_file)
+            self.screen.display()
+            self.label_image_num.setText(str(self.img_idx + 1) + ' / ' + str(len(self.image_list)))
 
     @handle_exceptions
-    def display(self):
-        self.screen.canvas.axes.clear()
-        self.screen.canvas.axes.imshow(self.data_array, cmap='gray', 
-                                       vmin=self.val_min, vmax=self.val_max)
-        self.screen.canvas.axes.axis('off')
-        self.screen.canvas.draw()
-        self.label_image_num.setText(str(self.img_idx+1)+' / '+str(len(self.image_list)))
+    def get_window(self, dcm_file):
+        if "WindowCenter" in dcm_file and "WindowWidth" in dcm_file:
+            center = dcm_file.WindowCenter
+            width = dcm_file.WindowWidth
+            if isinstance(center, pydicom.multival.MultiValue):
+                center = center[0]
+                width = width[0]
+            val_min = center - 0.5 * width
+            val_max = center + 0.5 * width
+        else:
+            val_min = None
+            val_max = None
+        return val_min, val_max
 
     @pyqtSlot()
     @handle_exceptions
@@ -96,20 +92,6 @@ class MainWindow(QMainWindow):
         self.target_folder = str(file_dialog.getExistingDirectory(self))
         self.img_idx += 0
         print('target folder:', self.target_folder)
-
-    @handle_exceptions
-    def set_window(self, dcm_file):
-        if "WindowCenter" in dcm_file and "WindowWidth" in dcm_file:
-            windowCenter = dcm_file.WindowCenter
-            windowWidth = dcm_file.WindowWidth
-            if isinstance(windowCenter, pydicom.multival.MultiValue):
-                windowCenter = windowCenter[0]
-                windowWidth = windowWidth[0]
-            self.val_min = windowCenter - 0.5 * windowWidth
-            self.val_max = windowCenter + 0.5 * windowWidth
-        else:
-            self.val_min = None
-            self.val_max = None
 
     @handle_exceptions
     def classify(self, class_nr):
@@ -175,59 +157,23 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     @handle_exceptions
     def on_checkbox(self):
-        if self.checkbox_class.isChecked():
-            self.label.setEnabled(True)
-            self.num_of_classes.setEnabled(True)
-            self.button_confirm.setEnabled(True)
-            self.table.setEnabled(True)
-        else:
-            self.label.setEnabled(False)
-            self.num_of_classes.setEnabled(False)
-            self.button_confirm.setEnabled(False)
-            self.table.setEnabled(False)
+        class_checked = self.checkbox_class.isChecked()
+        object_checked = self.checkbox_object.isChecked()
 
-        if self.checkbox_object.isChecked():
-            self.point.setEnabled(True)
-            self.box.setEnabled(True)
-            self.rs = RectangleSelector(self.screen.canvas.axes, self.line_select_callback,
-                       drawtype='box', useblit=False, button=[1],
-                       minspanx=5, minspany=5, spancoords='pixels', interactive=True)
-        else:
-            self.point.setEnabled(False)
-            self.box.setEnabled(False)
+        self.label.setEnabled(class_checked)
+        self.num_of_classes.setEnabled(class_checked)
+        self.button_confirm.setEnabled(class_checked)
+        self.table.setEnabled(class_checked)
 
-    @handle_exceptions
-    def line_select_callback(self, eclick, erelease):
-        x1, y1 = eclick.xdata, eclick.ydata
-        x2, y2 = erelease.xdata, erelease.ydata
-
-        rect = plt.Rectangle((min(x1, x2), min(y1, y2)), np.abs(x1 - x2), np.abs(y1 - y2))
-        self.screen.canvas.axes.add_patch(rect)
-
-    @handle_exceptions
-    def mouse_move(self, event):
-        sens = 3
-        x = event.x()
-        y = event.y()
-        dx = x - self.x
-        dy = y - self.y
-        if self.val_max + sens*dy - self.val_min - sens*dx > 0:
-            self.val_min += sens*dx
-            self.val_max += sens*dy
-        self.display()
-        self.x = x
-        self.y = y
-
-    def mouse_press(self, event):
-        self.x = event.x()
-        self.y = event.y()
-
-
+        self.point.setEnabled(object_checked)
+        self.box.setEnabled(object_checked)
+        self.screen.set_roi_selection(object_checked)
 
 
 ##########################################################################################
 
-app = QApplication([])
-window = MainWindow()
-window.showFullScreen()
-app.exec_()
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.showFullScreen()
+    app.exec_()

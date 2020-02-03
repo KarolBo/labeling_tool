@@ -42,7 +42,7 @@
      <layout class="QHBoxLayout" name="buttons_layout"/>
     </item>
     <item row="1" column="0">
-     <widget class="mpl_widget" name="screen" native="true">
+     <widget class="MplWidget" name="screen" native="true">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
         <horstretch>0</horstretch>
@@ -231,9 +231,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>mpl_widget</class>
+   <class>MplWidget</class>
    <extends>QWidget</extends>
-   <header>mpl_widget.h</header>
+   <header>mplwidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
