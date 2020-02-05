@@ -40,7 +40,7 @@ class MainWindow(QMainWindow):
         self.image_list = ''
         self.target_folder = ''
         self.file_extension = 'dcm'
-        self.img_idx = 0
+        self.img_idx = -1
         self.classified = False
         self.located = False
 
@@ -62,18 +62,21 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     @handle_exceptions
     def display_next(self):
-        if self.image_list:
+        if self.img_idx < len(self.image_list)-1:
+            self.img_idx += 1
             dcm_file = pydicom.dcmread(self.image_list[self.img_idx])
             self.screen.data_array = dcm_file.pixel_array
             self.screen.val_min, self.screen.val_max = self.get_window(dcm_file)
             self.screen.display()
-            self.img_idx += 1
-            self.label_image_num.setText(str(self.img_idx) + ' / ' + str(len(self.image_list)))
+            self.label_image_num.setText(str(self.img_idx+1) + ' / ' + str(len(self.image_list)))
             self.located = self.classified = False
             self.on_toggle()
             if self.checkbox_object.isChecked():
                 self.set_buttons_enabled(False)
+        else:
+            self.finito()
 
+    @handle_exceptions
     def set_buttons_enabled(self, state):
         n = self.buttons_layout.count()
         for i in range(n):
@@ -117,7 +120,7 @@ class MainWindow(QMainWindow):
 
     @handle_exceptions
     def classify(self, class_nr):
-        if self.image_list:
+        if self.img_idx < len(self.image_list):
             print('you classified as:', class_nr)
             src_path = self.image_list[self.img_idx]
             target_path = join(self.target_folder, str(class_nr), basename(src_path))
@@ -125,6 +128,8 @@ class MainWindow(QMainWindow):
             self.classified = True
             if self.is_ready():
                 self.display_next()
+        else:
+            self.finito()
 
     @pyqtSlot()
     @handle_exceptions
@@ -229,17 +234,42 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     @handle_exceptions
     def save_location(self):
-        path = join(self.target_folder, 'locations.csv')
-        with open(path, 'a+') as file:
-            filename = basename(self.image_list[self.img_idx])
-            location = str(self.screen.location).strip('()')
-            file.write(filename+','+location+'\n')
-        self.located = True
-        self.screen.draw_point('lawngreen')
-        if self.is_ready():
-            self.display_next()
-        elif self.checkbox_class.isChecked():
-            self.set_buttons_enabled(True)
+        if self.img_idx < len(self.image_list):
+            path = join(self.target_folder, 'locations.csv')
+            with open(path, 'a+') as file:
+                filename = basename(self.image_list[self.img_idx])
+                location = str(self.screen.location).strip('()')
+                file.write(filename+','+location+'\n')
+            self.located = True
+            self.screen.draw_point('lawngreen')
+            if self.is_ready():
+                self.display_next()
+            elif self.checkbox_class.isChecked():
+                self.set_buttons_enabled(True)
+        else:
+            self.finito()
+
+    @handle_exceptions
+    def finito(self):
+        self.screen.canvas.axes.clear()
+        self.screen.canvas.draw()
+        self.set_buttons_enabled(False)
+        self.label.setEnabled(False)
+        self.table.setEnabled(False)
+        self.point.setEnabled(False)
+        self.box.setEnabled(False)
+        self.button_save_roi.setEnabled(False)
+
+    @handle_exceptions
+    def revive(self):
+        class_checked = self.checkbox_class.isChecked()
+        object_checked = self.checkbox_object.isChecked()
+        self.set_buttons_enabled(class_checked)
+        self.label.setEnabled(class_checked)
+        self.table.setEnabled(class_checked)
+        self.point.setEnabled(object_checked)
+        self.box.setEnabled(object_checked)
+        self.button_save_roi.setEnabled(object_checked)
 
     @handle_exceptions
     def is_ready(self):
@@ -279,6 +309,8 @@ class MainWindow(QMainWindow):
         if self.img_idx > 1:
             self.img_idx -= 2
             self.display_next()
+
+        self.revive()
 
 
 ##########################################################################################

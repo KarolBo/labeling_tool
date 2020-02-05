@@ -74,8 +74,12 @@ class MplWidget(QWidget):
 
     @handle_exceptions
     def mouse_move(self, event):
-        if event.button.value == 2:
+        print('witam')
+        if (event.button.value == 2 and
+            event.xdata is not None and 
+            event.ydata is not None):
             sens = 2.5
+            print('zegnam')
             x = event.xdata
             y = event.ydata
             dx = x - self.x
@@ -93,10 +97,12 @@ class MplWidget(QWidget):
 
     @handle_exceptions
     def mouse_press(self, event):
-        if event.xdata is not None and event.ydata is not None:
+        if (event.xdata is not None and 
+            event.ydata is not None):
             self.x = event.xdata
             self.y = event.ydata
-            if self.mode == Mode.point:
+            if (self.mode == Mode.point and 
+               event.button.value == 1):
                 x = self.x / self.data_array.shape[1]
                 y = self.y / self.data_array.shape[0]
                 self.location = (x, y)
