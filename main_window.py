@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QPushButton,
 from PyQt5.QtGui import QIntValidator
 from PyQt5.uic import loadUi
 from glob import glob
-from os.path import join, isdir, basename, isfile
+from os.path import join, isdir, basename, isfile, abspath
 from os import mkdir, remove
 import sys
 from PyQt5.QtCore import pyqtSlot
@@ -17,8 +17,8 @@ def handle_exceptions(func):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            print('Exception in {}:'.format(func.__name__))
-            print(e)
+            with open('errors.log', 'a+') as f:
+                f.write('Exception in {}: {}\n'.format(func.__name__, e))
             return None
     return func_wrapper
 
@@ -28,7 +28,10 @@ class MainWindow(QMainWindow):
     @handle_exceptions
     def __init__(self):
         super().__init__()
-        loadUi("main_window.ui", self)
+
+        folder = getattr(sys, '_MEIPASS', abspath('.'))
+        loadUi(join(folder, 'main_window.ui'), self)
+
         self.menuBar().setNativeMenuBar(False)
         self.setWindowTitle("The Most Awesome Labelling Tool in the World!")
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -68,6 +71,14 @@ class MainWindow(QMainWindow):
             self.label_image_num.setText(str(self.img_idx) + ' / ' + str(len(self.image_list)))
             self.located = self.classified = False
             self.on_toggle()
+            if self.checkbox_object.isChecked():
+                self.set_buttons_enabled(False)
+
+    def set_buttons_enabled(self, state):
+        n = self.buttons_layout.count()
+        for i in range(n):
+            b = self.buttons_layout.itemAt(i).widget()
+            b.setEnabled(state)
 
     @handle_exceptions
     def get_window(self, dcm_file):
@@ -109,7 +120,7 @@ class MainWindow(QMainWindow):
         if self.image_list:
             print('you classified as:', class_nr)
             src_path = self.image_list[self.img_idx]
-            target_path = join(self.target_folder, str(class_nr), src_path.split('/')[-1])
+            target_path = join(self.target_folder, str(class_nr), basename(src_path))
             copyfile(src_path, target_path)
             self.classified = True
             if self.is_ready():
@@ -143,6 +154,7 @@ class MainWindow(QMainWindow):
 
     @handle_exceptions
     def add_rows(self, n):
+        self.table.setRowCount(0)
         for i in range(n):
             self.table.insertRow(self.table.rowCount())
 
@@ -160,12 +172,16 @@ class MainWindow(QMainWindow):
                 self.img_idx += 1
 
         if self.img_idx:
+            self.img_idx -= 1
             self.display_next()
 
     @handle_exceptions
     def keyPressEvent(self, event):
+        # print(event.key())
         if event.key() == 16777219:
             self.get_back()
+        elif event.key() == 16777220 and self.checkbox_object.isChecked():
+            self.save_location()
         else:
             class_num = event.key() - 48
             if self.num_of_classes.text() and class_num < int(self.num_of_classes.text()):
@@ -187,21 +203,28 @@ class MainWindow(QMainWindow):
         self.point.setEnabled(object_checked)
         self.box.setEnabled(object_checked)
 
+        state = class_checked and (not object_checked or (object_checked and self.located))
+        self.set_buttons_enabled(state)
+
         if not object_checked:
-            self.screen.set_mode(1)
-        elif box_checked:
-            self.screen.set_mode(3)
+            self.screen.set_mode(0)
         else:
-            self.screen.set_mode(2)
+            if box_checked:
+                self.screen.set_mode(2)
+            else:
+                self.screen.set_mode(1)
 
     @pyqtSlot()
     @handle_exceptions
     def on_toggle(self):
+        self.screen.display()
+        object_checked = self.checkbox_object.isChecked()
         box_checked = self.box.isChecked()
-        if box_checked:
-            self.screen.set_mode(3)
-        else:
-            self.screen.set_mode(2)
+        if object_checked:
+            if box_checked:
+                self.screen.set_mode(2)
+            else:
+                self.screen.set_mode(1)
 
     @pyqtSlot()
     @handle_exceptions
@@ -212,8 +235,11 @@ class MainWindow(QMainWindow):
             location = str(self.screen.location).strip('()')
             file.write(filename+','+location+'\n')
         self.located = True
+        self.screen.draw_point('lawngreen')
         if self.is_ready():
             self.display_next()
+        elif self.checkbox_class.isChecked():
+            self.set_buttons_enabled(True)
 
     @handle_exceptions
     def is_ready(self):
@@ -235,7 +261,6 @@ class MainWindow(QMainWindow):
         # remove file
         for i in range(n):
             file_path = join(self.target_folder, str(i), file_name)
-            print(file_path)
             if isfile(file_path):
                 remove(file_path)
                 print('Removed {}'.format(file_path))
@@ -248,8 +273,6 @@ class MainWindow(QMainWindow):
             with open(path, "w") as f:
                 for line in lines:
                     if file_name not in line:
-                        print(file_name)
-                        print(line)
                         f.write(line)
 
         # display previous image

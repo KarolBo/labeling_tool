@@ -8,9 +8,9 @@ from enum import Enum
 
 
 class Mode(Enum):
-    window = 1
-    point = 2
-    roi = 3
+    nothing = 0
+    point = 1
+    roi = 2
 
 
 class MplWidget(QWidget):
@@ -40,7 +40,7 @@ class MplWidget(QWidget):
 
         self.rs = None
         self.location = None
-        self.mode = Mode.window
+        self.mode = Mode.nothing
 
     @handle_exceptions
     def display(self):
@@ -53,7 +53,7 @@ class MplWidget(QWidget):
     @handle_exceptions
     def set_mode(self, n):
         new_mode = Mode(n)
-        if new_mode == Mode.window or new_mode == Mode.point:
+        if new_mode == Mode.nothing or new_mode == Mode.point:
             self.rs = None
             self.location = None
         elif new_mode == Mode.roi:
@@ -74,7 +74,7 @@ class MplWidget(QWidget):
 
     @handle_exceptions
     def mouse_move(self, event):
-        if self.mode == Mode.window:
+        if event.button.value == 2:
             sens = 2.5
             x = event.xdata
             y = event.ydata
@@ -93,12 +93,16 @@ class MplWidget(QWidget):
 
     @handle_exceptions
     def mouse_press(self, event):
-        self.x = event.xdata
-        self.y = event.ydata
-        if self.mode == Mode.point:
-            x = self.x / self.data_array.shape[1]
-            y = self.y / self.data_array.shape[0]
-            self.location = (x, y)
-            self.display()
-            self.canvas.axes.scatter(self.x, self.y)
-            self.canvas.draw()
+        if event.xdata is not None and event.ydata is not None:
+            self.x = event.xdata
+            self.y = event.ydata
+            if self.mode == Mode.point:
+                x = self.x / self.data_array.shape[1]
+                y = self.y / self.data_array.shape[0]
+                self.location = (x, y)
+                self.display()
+                self.draw_point('red')
+    
+    def draw_point(self, color):
+        self.canvas.axes.scatter(self.x, self.y, c=color)
+        self.canvas.draw()
