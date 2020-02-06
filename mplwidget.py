@@ -75,7 +75,7 @@ class MplWidget(QWidget):
     @handle_exceptions
     def mouse_move(self, event):
         button_number = event.button if type(event.button) is int else event.button.value
-        if (button_number and
+        if (button_number == 2 and
             event.xdata is not None and 
             event.ydata is not None):
             sens = 2.5
