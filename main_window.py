@@ -166,6 +166,7 @@ class MainWindow(QMainWindow):
         self.table.setRowCount(0)
         for i in range(n):
             self.table.insertRow(self.table.rowCount())
+            self.table.setFocusPolicy(False)
 
     @handle_exceptions
     def restore_work(self, n=99):
