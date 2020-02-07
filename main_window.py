@@ -166,7 +166,6 @@ class MainWindow(QMainWindow):
         self.table.setRowCount(0)
         for i in range(n):
             self.table.insertRow(self.table.rowCount())
-        self.table.setFocusPolicy(False)
 
     @handle_exceptions
     def restore_work(self, n=99):
@@ -208,6 +207,12 @@ class MainWindow(QMainWindow):
             self.get_back()
         elif event.key() == 16777220 and self.checkbox_object.isChecked():
             self.save_location()
+        elif event.key() == 16777234:
+        	if self.checkbox_class and int(self.num_of_classes.text()) == 2:
+                self.classify(0)
+        elif event.key() == 16777236:
+        	if self.checkbox_class and int(self.num_of_classes.text()) == 2:
+                self.classify(1)
         else:
             class_num = event.key() - 48
             if self.num_of_classes.text() and class_num < int(self.num_of_classes.text()):
@@ -228,6 +233,7 @@ class MainWindow(QMainWindow):
 
         self.point.setEnabled(object_checked)
         self.box.setEnabled(object_checked)
+        self.button_save_roi.setEnabled(object_checked)
 
         state = class_checked and (not object_checked or (object_checked and self.located))
         self.set_buttons_enabled(state)
