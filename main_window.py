@@ -109,6 +109,7 @@ class MainWindow(QMainWindow):
         path = join(source_folder, '*.'+self.file_extension)
         self.image_list = glob(path)
         self.display_next()
+        self.restore_work()
 
     @pyqtSlot()
     @handle_exceptions
@@ -117,6 +118,8 @@ class MainWindow(QMainWindow):
         file_dialog.setFileMode(QFileDialog.Directory)
         self.target_folder = str(file_dialog.getExistingDirectory(self))
         print('target folder:', self.target_folder)
+        if self.image_list:
+            self.restore_work()
 
     @handle_exceptions
     def classify(self, class_nr):
@@ -140,7 +143,6 @@ class MainWindow(QMainWindow):
             n = 0
         self.create_buttons(n)
         self.create_folders(n)
-        self.check_folders(n)
         self.add_rows(n)
 
     @handle_exceptions
@@ -166,12 +168,23 @@ class MainWindow(QMainWindow):
             self.table.insertRow(self.table.rowCount())
 
     @handle_exceptions
-    def check_folders(self, n):
+    def restore_work(self, n=99):
         labeled_imgs = set()
+        class_number = 0
         for i in range(n):
             folder_name = join(self.target_folder, str(i))
-            file_list = glob(join(folder_name,'*'))
-            file_list = [basename(path) for path in file_list]
+            if isdir(folder_name):
+                file_list = glob(join(folder_name,'*'))
+                file_list = [basename(path) for path in file_list]
+                labeled_imgs.update(file_list)
+                class_number = i + 1
+
+        path = join(self.target_folder, 'locations.csv')
+        if isfile(path):
+            self.checkbox_object.setChecked(True)
+            with open(path, "r") as f:
+                lines = f.readlines()
+            file_list = [file_name.split(',') for file_name in lines]
             labeled_imgs.update(file_list)
 
         for file in self.image_list:
@@ -182,10 +195,15 @@ class MainWindow(QMainWindow):
             self.img_idx -= 1
             self.display_next()
 
+        if class_number:
+            self.checkbox_class.setChecked(True)
+            self.num_of_classes.setText(str(class_number))
+            self.set_categories()
+
     @handle_exceptions
     def keyPressEvent(self, event):
-        # print(event.key())
-        if event.key() == 16777219:
+        print(event.key())
+        if event.key() == 116777219:
             self.get_back()
         elif event.key() == 16777220 and self.checkbox_object.isChecked():
             self.save_location()
