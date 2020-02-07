@@ -166,7 +166,7 @@ class MainWindow(QMainWindow):
         self.table.setRowCount(0)
         for i in range(n):
             self.table.insertRow(self.table.rowCount())
-            self.table.setFocusPolicy(False)
+        self.table.setFocusPolicy(False)
 
     @handle_exceptions
     def restore_work(self, n=99):
@@ -185,7 +185,7 @@ class MainWindow(QMainWindow):
             self.checkbox_object.setChecked(True)
             with open(path, "r") as f:
                 lines = f.readlines()
-            file_list = [file_name.split(',') for file_name in lines]
+            file_list = [file_name.split(',')[0] for file_name in lines]
             labeled_imgs.update(file_list)
 
         for file in self.image_list:
@@ -203,7 +203,7 @@ class MainWindow(QMainWindow):
 
     @handle_exceptions
     def keyPressEvent(self, event):
-        print(event.key())
+        # print(event.key())
         if event.key() == 116777219:
             self.get_back()
         elif event.key() == 16777220 and self.checkbox_object.isChecked():
@@ -327,7 +327,7 @@ class MainWindow(QMainWindow):
                         f.write(line)
 
         # display previous image
-        if self.img_idx > 1:
+        if self.img_idx > 0:
             self.img_idx -= 2
             self.display_next()
 
