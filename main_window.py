@@ -109,6 +109,7 @@ class MainWindow(QMainWindow):
         path = join(source_folder, '*.'+self.file_extension)
         self.image_list = glob(path)
         self.display_next()
+        self.restore_work()
 
     @pyqtSlot()
     @handle_exceptions
@@ -117,6 +118,8 @@ class MainWindow(QMainWindow):
         file_dialog.setFileMode(QFileDialog.Directory)
         self.target_folder = str(file_dialog.getExistingDirectory(self))
         print('target folder:', self.target_folder)
+        if self.image_list:
+            self.restore_work()
 
     @handle_exceptions
     def classify(self, class_nr):
@@ -140,7 +143,6 @@ class MainWindow(QMainWindow):
             n = 0
         self.create_buttons(n)
         self.create_folders(n)
-        self.check_folders(n)
         self.add_rows(n)
 
     @handle_exceptions
@@ -164,12 +166,23 @@ class MainWindow(QMainWindow):
             self.table.insertRow(self.table.rowCount())
 
     @handle_exceptions
-    def check_folders(self, n):
+    def restore_work(self, n=99):
         labeled_imgs = set()
+        class_number = 0
         for i in range(n):
             folder_name = join(self.target_folder, str(i))
-            file_list = glob(join(folder_name,'*'))
-            file_list = [basename(path) for path in file_list]
+            if isdir(folder_name):
+                file_list = glob(join(folder_name,'*'))
+                file_list = [basename(path) for path in file_list]
+                labeled_imgs.update(file_list)
+                class_number = i + 1
+
+        path = join(self.target_folder, 'locations.csv')
+        if isfile(path):
+            self.checkbox_object.setChecked(True)
+            with open(path, "r") as f:
+                lines = f.readlines()
+            file_list = [file_name.split(',')[0] for file_name in lines]
             labeled_imgs.update(file_list)
 
         for file in self.image_list:
@@ -180,13 +193,24 @@ class MainWindow(QMainWindow):
             self.img_idx -= 1
             self.display_next()
 
+        if class_number:
+            self.checkbox_class.setChecked(True)
+            self.num_of_classes.setText(str(class_number))
+            self.set_categories()
+
     @handle_exceptions
     def keyPressEvent(self, event):
         # print(event.key())
-        if event.key() == 16777219:
+        if event.key() == 116777219:
             self.get_back()
         elif event.key() == 16777220 and self.checkbox_object.isChecked():
             self.save_location()
+        elif event.key() == 16777234:
+        	if self.checkbox_class and int(self.num_of_classes.text()) == 2:
+                self.classify(0)
+        elif event.key() == 16777236:
+        	if self.checkbox_class and int(self.num_of_classes.text()) == 2:
+                self.classify(1)
         else:
             class_num = event.key() - 48
             if self.num_of_classes.text() and class_num < int(self.num_of_classes.text()):
@@ -207,6 +231,7 @@ class MainWindow(QMainWindow):
 
         self.point.setEnabled(object_checked)
         self.box.setEnabled(object_checked)
+        self.button_save_roi.setEnabled(object_checked)
 
         state = class_checked and (not object_checked or (object_checked and self.located))
         self.set_buttons_enabled(state)
@@ -306,7 +331,7 @@ class MainWindow(QMainWindow):
                         f.write(line)
 
         # display previous image
-        if self.img_idx > 1:
+        if self.img_idx > 0:
             self.img_idx -= 2
             self.display_next()
 
