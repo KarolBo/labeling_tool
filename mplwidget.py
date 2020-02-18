@@ -21,10 +21,10 @@ class MplWidget(QWidget):
         super().__init__(parent)
         
         self.canvas = FigureCanvas(Figure())
-        
         vertical_layout = QVBoxLayout()
         vertical_layout.addWidget(self.canvas)
         self.canvas.axes = self.canvas.figure.add_subplot(111)
+        # self.canvas.axes.set_facecolor("red")
         self.canvas.axes.axis('off')
         self.setLayout(vertical_layout)
 

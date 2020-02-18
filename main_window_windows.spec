@@ -4,12 +4,12 @@ block_cipher = None
 
 
 a = Analysis(['main_window.py'],
-             pathex=['D:/labeling_tool'],
+             pathex=['K:/labeling_tool'],
              binaries=[],
              datas=[
-			 ('D:/labeling_tool/main_window.py', '.'),
-			('D:/labeling_tool/mplwidget.py', '.'),
-			('D:/labeling_tool/main_window.ui', '.')
+			 ('K:/labeling_tool/main_window.py', '.'),
+			('K:/labeling_tool/mplwidget.py', '.'),
+			('K:/labeling_tool/main_window.ui', '.')
 			 ],
              hiddenimports=["matplotlib", "pkg_resources.py2_warn"],
              hookspath=[],

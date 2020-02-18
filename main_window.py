@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QPushButton, QHeaderView
-from PyQt5.QtGui import QIntValidator
+from PyQt5.QtGui import QIntValidator, QPixmap
 from PyQt5.uic import loadUi
 from glob import glob
 from os.path import join, isdir, basename, isfile, abspath
@@ -40,9 +40,13 @@ class MainWindow(QMainWindow):
         self.image_list = ''
         self.target_folder = ''
         self.file_extension = 'dcm'
+        self.result_string = ''
         self.img_idx = -1
         self.classified = False
         self.located = False
+
+        logo = QPixmap(join(folder, "logo_b_rayZ.png"))
+        self.label_logo.setPixmap(logo)
 
         self.connect_signals()
 
@@ -55,13 +59,14 @@ class MainWindow(QMainWindow):
         self.checkbox_object.stateChanged.connect(self.on_checkbox)
         self.box.clicked.connect(self.on_toggle)
         self.point.clicked.connect(self.on_toggle)
-        self.button_save_roi.clicked.connect(self.save_location)
+        self.button_save_roi.clicked.connect(self.add_location)
         self.button_skip.clicked.connect(self.display_next)
         self.button_back.clicked.connect(self.get_back)
 
     @pyqtSlot()
     @handle_exceptions
     def display_next(self):
+        self.result_string = ''
         if self.img_idx < len(self.image_list)-1:
             self.img_idx += 1
             dcm_file = pydicom.dcmread(self.image_list[self.img_idx])
@@ -121,15 +126,28 @@ class MainWindow(QMainWindow):
         if self.image_list:
             self.restore_work()
 
+    def add_location(self):
+        self.located = True
+        self.screen.draw_point('lawngreen')
+        self.result_string += str(self.screen.location).strip('()')
+        if self.is_ready():
+            self.save_result()
+            self.display_next()
+        elif self.checkbox_class.isChecked():
+            self.set_buttons_enabled(True)
+
     @handle_exceptions
     def classify(self, class_nr):
         if self.img_idx < len(self.image_list):
             print('you classified as:', class_nr)
-            src_path = self.image_list[self.img_idx]
-            target_path = join(self.target_folder, str(class_nr), basename(src_path))
-            copyfile(src_path, target_path)
+            self.result_string += ','+str(class_nr)
+            if self.action_copy.isChecked():
+                src_path = self.image_list[self.img_idx]
+                target_path = join(self.target_folder, str(class_nr), basename(src_path))
+                copyfile(src_path, target_path)
             self.classified = True
             if self.is_ready():
+                self.save_result()
                 self.display_next()
         else:
             self.finito()
@@ -147,10 +165,20 @@ class MainWindow(QMainWindow):
 
     @handle_exceptions
     def create_buttons(self, n):
+        stylesheet = """background: #ff655a;
+                        font:inherit;
+                        border: 1px solid grey;
+                        border-radius: 6px;
+                        adding: 0.25rem 1rem;
+                        margin-right: 1rem;
+                        color:white;
+                        height:40px;
+                        font-size: 18px;"""
         for i in reversed(range(self.buttons_layout.count())):
             self.buttons_layout.itemAt(i).widget().setParent(None)
         for i in range(n):
             button = QPushButton("class "+str(i))
+            button.setStyleSheet(stylesheet)
             button.clicked.connect(lambda event, cls=i: self.classify(cls))
             self.buttons_layout.addWidget(button)
 
@@ -206,12 +234,12 @@ class MainWindow(QMainWindow):
         if event.key() == 116777219:
             self.get_back()
         elif event.key() == 16777220 and self.checkbox_object.isChecked():
-            self.save_location()
+            self.add_location()
         elif event.key() == 16777234:
-        	if self.checkbox_class and int(self.num_of_classes.text()) == 2:
+            if self.checkbox_class and int(self.num_of_classes.text()) == 2:
                 self.classify(0)
         elif event.key() == 16777236:
-        	if self.checkbox_class and int(self.num_of_classes.text()) == 2:
+            if self.checkbox_class and int(self.num_of_classes.text()) == 2:
                 self.classify(1)
         else:
             class_num = event.key() - 48
@@ -260,19 +288,12 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     @handle_exceptions
-    def save_location(self):
+    def save_result(self):
         if self.img_idx < len(self.image_list):
-            path = join(self.target_folder, 'locations.csv')
+            path = join(self.target_folder, 'annotations.csv')
             with open(path, 'a+') as file:
                 filename = basename(self.image_list[self.img_idx])
-                location = str(self.screen.location).strip('()')
-                file.write(filename+','+location+'\n')
-            self.located = True
-            self.screen.draw_point('lawngreen')
-            if self.is_ready():
-                self.display_next()
-            elif self.checkbox_class.isChecked():
-                self.set_buttons_enabled(True)
+                file.write(filename+','+self.result_string+'\n')
         else:
             self.finito()
 
