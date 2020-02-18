@@ -112,8 +112,9 @@ class MainWindow(QMainWindow):
         source_folder = str(file_dialog.getExistingDirectory(self))
         if not self.target_folder:
             self.target_folder = source_folder
-        path = join(source_folder, '*.'+self.file_extension)
-        self.image_list = glob(path)
+        pattern = join('**', '*.'+self.file_extension)
+        path = join(source_folder, pattern)
+        self.image_list = glob(path, recursive=True)
         self.display_next()
         self.restore_work()
 
