@@ -9,6 +9,7 @@ from PyQt5.QtCore import pyqtSlot
 import pydicom
 from shutil import copyfile
 import functools
+import threading
 
 
 def handle_exceptions(func):
@@ -126,10 +127,11 @@ class MainWindow(QMainWindow):
         if self.image_list:
             self.restore_work()
 
+    @handle_exceptions
     def add_location(self):
         self.located = True
         self.screen.draw_point('lawngreen')
-        self.result_string += str(self.screen.location).strip('()')
+        self.result_string += ','+str(self.screen.location).strip('()')
         if self.is_ready():
             self.save_result()
             self.display_next()
@@ -144,7 +146,7 @@ class MainWindow(QMainWindow):
             if self.action_copy.isChecked():
                 src_path = self.image_list[self.img_idx]
                 target_path = join(self.target_folder, str(class_nr), basename(src_path))
-                copyfile(src_path, target_path)
+                self.copy(src_path, target_path)
             self.classified = True
             if self.is_ready():
                 self.save_result()
@@ -293,7 +295,7 @@ class MainWindow(QMainWindow):
             path = join(self.target_folder, 'annotations.csv')
             with open(path, 'a+') as file:
                 filename = basename(self.image_list[self.img_idx])
-                file.write(filename+','+self.result_string+'\n')
+                file.write(filename+self.result_string+'\n')
         else:
             self.finito()
 
@@ -359,6 +361,12 @@ class MainWindow(QMainWindow):
             self.display_next()
 
         self.revive()
+
+    @handle_exceptions
+    def copy(self, src_path, target_path):
+        process_thread = threading.Thread(target=copyfile, args=(src_path, target_path))
+        process_thread.daemon = True
+        process_thread.start()
 
 
 ##########################################################################################
