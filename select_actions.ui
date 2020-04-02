@@ -201,6 +201,16 @@
        </property>
       </spacer>
      </item>
+     <item>
+      <widget class="QCheckBox" name="checkbox_copy">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="text">
+        <string>Copy Files</string>
+       </property>
+      </widget>
+     </item>
     </layout>
    </item>
    <item>

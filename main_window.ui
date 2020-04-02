@@ -499,8 +499,6 @@ height:40px;
       <font>
        <family>Arial</family>
        <pointsize>12</pointsize>
-       <weight>75</weight>
-       <bold>true</bold>
       </font>
      </property>
      <property name="title">
@@ -545,8 +543,8 @@ height:40px;
     <font>
      <family>Arial</family>
      <pointsize>12</pointsize>
-     <weight>75</weight>
-     <bold>true</bold>
+     <weight>50</weight>
+     <bold>false</bold>
     </font>
    </property>
   </action>
@@ -558,8 +556,8 @@ height:40px;
     <font>
      <family>Arial</family>
      <pointsize>12</pointsize>
-     <weight>75</weight>
-     <bold>true</bold>
+     <weight>50</weight>
+     <bold>false</bold>
     </font>
    </property>
   </action>
@@ -589,8 +587,8 @@ height:40px;
     <font>
      <family>Arial</family>
      <pointsize>12</pointsize>
-     <weight>75</weight>
-     <bold>true</bold>
+     <weight>50</weight>
+     <bold>false</bold>
     </font>
    </property>
   </action>
@@ -605,8 +603,8 @@ height:40px;
     <font>
      <family>Arial</family>
      <pointsize>12</pointsize>
-     <weight>75</weight>
-     <bold>true</bold>
+     <weight>50</weight>
+     <bold>false</bold>
     </font>
    </property>
   </action>
@@ -629,6 +627,31 @@ height:40px;
     <string>JPG</string>
    </property>
   </action>
+  <action name="actionPNG_2">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>PNG</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Arial</family>
+     <pointsize>12</pointsize>
+    </font>
+   </property>
+  </action>
+  <action name="actionDICOM_2">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>DICOM</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -640,7 +663,4 @@ height:40px;
  </customwidgets>
  <resources/>
  <connections/>
- <buttongroups>
-  <buttongroup name="buttonGroup"/>
- </buttongroups>
 </ui>
