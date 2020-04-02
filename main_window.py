@@ -1,8 +1,10 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QPushButton, QHeaderView
-from PyQt5.QtGui import QIntValidator, QPixmap
+from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QTableWidgetItem, QHeaderView, QActionGroup, \
+                            QPushButton
+from PyQt5.QtGui import QPixmap
 from PyQt5.uic import loadUi
+from PyQt5.QtCore import Qt
 from glob import glob
-from os.path import join, isdir, basename, isfile, abspath
+from os.path import join, isdir, basename, isfile, abspath, exists
 from os import mkdir, remove
 import sys
 from PyQt5.QtCore import pyqtSlot
@@ -10,6 +12,8 @@ import pydicom
 from shutil import copyfile
 import functools
 import threading
+from scipy.ndimage import imread
+import json
 
 
 def handle_exceptions(func):
@@ -30,57 +34,324 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        folder = getattr(sys, '_MEIPASS', abspath('.'))
-        loadUi(join(folder, 'main_window.ui'), self)
+        self.folder = getattr(sys, '_MEIPASS', abspath('.'))
+        loadUi(join(self.folder, 'main_window.ui'), self)
 
-        self.menuBar().setNativeMenuBar(False)
-        self.setWindowTitle("The Most Awesome Labelling Tool in the World!")
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.num_of_classes.setValidator(QIntValidator(0, 100, self))
-
-        self.image_list = ''
-        self.target_folder = ''
         self.file_extension = 'dcm'
+        self.image_list = ''
+        self.data_folder = ''
+        self.project_folder = ''
         self.result_string = ''
         self.img_idx = -1
         self.classified = False
         self.located = False
+        self.num_of_classes = None
+        self.object_detection_mode = False
 
-        logo = QPixmap(join(folder, "logo_b_rayZ.png"))
-        self.label_logo.setPixmap(logo)
+        self.class_labels = []
 
+        self.project_creator_dialog = None
+
+        self.init_gui()
         self.connect_signals()
 
     @handle_exceptions
+    def init_gui(self):
+        self.menuBar().setNativeMenuBar(False)
+        self.setWindowTitle("The Most Awesome Labelling Tool in the World!")
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # self.num_of_classes.setValidator(QIntValidator(0, 100, self))
+
+        extension_group = QActionGroup(self)
+        extension_group.addAction(self.actionDICOM)
+        extension_group.addAction(self.actionPNG)
+        self.actionDICOM.setChecked(True)
+
+        logo = QPixmap(join(self.folder, "logo_b_rayZ.png"))
+        self.label_logo.setPixmap(logo)
+
+    @handle_exceptions
     def connect_signals(self):
-        self.menu_open.triggered.connect(self.load_folder)
-        self.menu_save.triggered.connect(self.set_target_folder)
-        self.button_confirm.clicked.connect(self.set_categories)
-        self.checkbox_class.stateChanged.connect(self.on_checkbox)
-        self.checkbox_object.stateChanged.connect(self.on_checkbox)
-        self.box.clicked.connect(self.on_toggle)
-        self.point.clicked.connect(self.on_toggle)
+        self.menu_new.triggered.connect(self.creator_step_1)
+        self.menu_continue.triggered.connect(self.load_project)
+
+        self.action_copy.triggered.connect(self.create_folders)
+        self.actionDICOM.triggered.connect(lambda: self.assign_extension('dcm'))
+        self.actionPNG.triggered.connect(lambda: self.assign_extension('png'))
+
         self.button_save_roi.clicked.connect(self.add_location)
-        self.button_skip.clicked.connect(self.display_next)
+        self.button_skip.clicked.connect(self.display_and_increment)
         self.button_back.clicked.connect(self.get_back)
 
     @pyqtSlot()
+    def assign_extension(self, extension):
+        self.file_extension = extension
+
+    @pyqtSlot()
     @handle_exceptions
-    def display_next(self):
-        self.result_string = ''
-        if self.img_idx < len(self.image_list)-1:
-            self.img_idx += 1
-            dcm_file = pydicom.dcmread(self.image_list[self.img_idx])
-            self.screen.data_array = dcm_file.pixel_array
-            self.screen.val_min, self.screen.val_max = self.get_window(dcm_file)
-            self.screen.display()
-            self.label_image_num.setText(str(self.img_idx+1) + ' / ' + str(len(self.image_list)))
-            self.located = self.classified = False
-            self.on_toggle()
-            if self.checkbox_object.isChecked():
-                self.set_buttons_enabled(False)
+    def creator_step_1(self):
+        self.project_creator_dialog = loadUi(join(self.folder, 'select_folder.ui'))
+        self.project_creator_dialog.setWindowFlags(
+            self.project_creator_dialog.windowFlags() | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
+                                                      | Qt.X11BypassWindowManagerHint)
+        self.project_creator_dialog.show()
+        self.project_creator_dialog.button_cancel.clicked.connect(self.project_creator_dialog.close)
+        self.project_creator_dialog.button_next.clicked.connect(self.creator_step_2)
+        self.project_creator_dialog.button_browse.clicked.connect(self.set_project_folder)
+
+    @pyqtSlot()
+    @handle_exceptions
+    def creator_step_2(self):
+        self.img_idx = 0
+        self.project_creator_dialog.label.setText('Load DICOM Files')
+        self.project_creator_dialog.lineEdit.setText('')
+        self.project_creator_dialog.button_next.disconnect()
+        self.project_creator_dialog.button_browse.disconnect()
+        self.project_creator_dialog.button_next.clicked.connect(self.creator_step_3)
+        self.project_creator_dialog.button_browse.clicked.connect(self.set_data_folder)
+
+    @pyqtSlot()
+    @handle_exceptions
+    def creator_step_3(self):
+        self.project_creator_dialog = loadUi(join(self.folder, 'select_actions.ui'))
+        self.project_creator_dialog.setWindowFlags(
+            self.project_creator_dialog.windowFlags() | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
+            | Qt.X11BypassWindowManagerHint)
+        self.project_creator_dialog.show()
+        self.project_creator_dialog.button_cancel.clicked.connect(self.project_creator_dialog.close)
+
+        def on_next_click():
+            self.object_detection_mode = self.project_creator_dialog.checkbox_object.isChecked()
+            if self.object_detection_mode:
+                if self.project_creator_dialog.radio_point.isChecked():
+                    self.screen.set_mode(1)
+                else:
+                    self.screen.set_mode(2)
+            else:
+                self.screen.set_mode(0)
+            if self.project_creator_dialog.check_class.isChecked():
+                self.num_of_classes = self.project_creator_dialog.comboBox.currentIndex() + 2
+                self.creator_step_4()
+            else:
+                self.setup_project()
+
+        def on_class_check(state):
+            self.project_creator_dialog.label_classes.setEnabled(state)
+            self.project_creator_dialog.comboBox.setEnabled(state)
+
+        def on_object_check(state):
+            self.project_creator_dialog.radio_point.setEnabled(state)
+            self.project_creator_dialog.radio_square.setEnabled(state)
+
+        self.project_creator_dialog.button_next.clicked.connect(on_next_click)
+        self.project_creator_dialog.check_class.stateChanged.connect(on_class_check)
+        self.project_creator_dialog.checkbox_object.stateChanged.connect(on_object_check)
+
+    @pyqtSlot()
+    @handle_exceptions
+    def creator_step_4(self):
+        self.project_creator_dialog = loadUi(join(self.folder, 'class_names.ui'))
+        self.project_creator_dialog.setWindowFlags(
+            self.project_creator_dialog.windowFlags() | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
+            | Qt.X11BypassWindowManagerHint)
+        self.project_creator_dialog.show()
+
+        self.project_creator_dialog.tableWidget.setRowCount(self.num_of_classes)
+        for i in range(self.num_of_classes):
+            item = QTableWidgetItem(str(i))
+            self.project_creator_dialog.tableWidget.setItem(i, 0, item)
+            item = QTableWidgetItem('class {}'.format(i))
+            self.project_creator_dialog.tableWidget.setItem(i, 1, item)
+
+        def on_begin():
+            for i in range(self.num_of_classes):
+                label = self.project_creator_dialog.tableWidget.item(i, 1).text()
+                self.class_labels.append(label)
+            self.setup_project()
+
+        self.project_creator_dialog.button_cancel.clicked.connect(self.project_creator_dialog.close)
+        self.project_creator_dialog.button_next.clicked.connect(on_begin)
+
+    @pyqtSlot()
+    @handle_exceptions
+    def set_project_folder(self):
+        self.project_creator_dialog.setVisible(False)
+        file_dialog = QFileDialog()
+        file_dialog.setFileMode(QFileDialog.Directory)
+        self.project_folder = str(file_dialog.getExistingDirectory(self))
+        self.project_creator_dialog.setVisible(True)
+        self.project_creator_dialog.lineEdit.setText(self.project_folder)
+        if self.project_folder:
+            self.project_creator_dialog.button_next.setEnabled(True)
         else:
+            self.project_creator_dialog.button_next.setEnabled(False)
+
+    @pyqtSlot()
+    @handle_exceptions
+    def set_data_folder(self):
+        self.project_creator_dialog.setVisible(False)
+        file_dialog = QFileDialog()
+        file_dialog.setFileMode(QFileDialog.Directory)
+        self.data_folder = str(file_dialog.getExistingDirectory(self))
+        self.project_creator_dialog.setVisible(True)
+        self.project_creator_dialog.lineEdit.setText(self.data_folder)
+        if self.data_folder:
+            self.load_data()
+            if self.image_list:
+                self.project_creator_dialog.button_next.setEnabled(True)
+            else:
+                self.project_creator_dialog.button_next.setEnabled(False)
+
+    @handle_exceptions
+    def load_data(self):
+        pattern = join('**', '*.' + self.file_extension)
+        path = join(self.data_folder, pattern)
+        self.image_list = glob(path, recursive=True)
+
+    @pyqtSlot()
+    @handle_exceptions
+    def setup_project(self):
+        self.project_creator_dialog = None
+        self.save_settings()
+        self.start_labeling()
+
+    @handle_exceptions
+    def save_settings(self):
+        settings = {'data_folder': self.data_folder,
+                    'class_labels': self.class_labels,
+                    'object_detection': self.object_detection_mode,
+                    'last_image': self.img_idx}
+        path = join(self.project_folder, 'settings.json')
+        with open(path, 'w') as json_file:
+            json.dump(settings, json_file)
+
+    @pyqtSlot()
+    @handle_exceptions
+    def load_project(self):
+        file_dialog = QFileDialog()
+        file_dialog.setFileMode(QFileDialog.Directory)
+        self.project_folder = str(file_dialog.getExistingDirectory(self))
+        path = join(self.project_folder, 'settings.json')
+        if exists(path):
+            with open(path, 'r') as json_file:
+                settings = json.load(json_file)
+            self.img_idx = settings['last_image']
+            self.data_folder = settings['data_folder']
+            self.load_data()
+            self.class_labels = settings['class_labels']
+            self.object_detection_mode = settings['object_detection']
+
+            self.start_labeling()
+
+    @handle_exceptions
+    def start_labeling(self):
+        self.create_buttons()
+        if self.class_labels:
+            self.fill_class_table()
+        if self.class_labels is not None:
+            self.create_folders()
+        self.display_and_increment()
+
+    @handle_exceptions
+    def create_folders(self):
+        if self.action_copy.isChecked():
+            n = len(self.class_labels)
+            for i in range(n):
+                folder_name = join(self.target_folder, self.class_labels[i])
+                if not isdir(folder_name):
+                    mkdir(folder_name)
+
+    @handle_exceptions
+    def create_buttons(self):
+        n = len(self.class_labels)
+        stylesheet = """background: #ff655a;
+                        font: inherit;
+                        border: 1px solid grey;
+                        border-radius: 6px;
+                        adding: 0.25rem 1rem;
+                        margin-right: 1rem;
+                        color: white;
+                        height: 40px;
+                        font-size: 20;"""
+        for i in reversed(range(self.buttons_layout.count())):
+            self.buttons_layout.itemAt(i).widget().setParent(None)
+        for i in range(n):
+            button = QPushButton(self.class_labels[i])
+            button.setStyleSheet(stylesheet)
+            button.clicked.connect(lambda event, cls=i: self.classify(cls))
+            self.buttons_layout.addWidget(button)
+
+    @handle_exceptions
+    def fill_class_table(self):
+        n = len(self.class_labels)
+        self.table.setRowCount(n)
+        for i in range(n):
+            item = QTableWidgetItem(self.class_labels[i])
+            self.table.setItem(i, 0, item)
+        labels = [str(i) for i in range(n)]
+        self.table.setVerticalHeaderLabels(labels)
+
+    @pyqtSlot()
+    @handle_exceptions
+    def display_and_increment(self):
+        self.result_string = ''
+        self.located = self.classified = False
+        if self.object_detection_mode:
+            self.set_buttons_enabled(False)
+
+        if self.file_extension == 'dcm':
+            dcm_file = pydicom.dcmread(self.image_list[self.img_idx])
+            self.screen.val_min, self.screen.val_max = self.get_window(dcm_file)
+            self.screen.data_array = dcm_file.pixel_array
+        else:
+            self.screen.data_array = imread(self.image_list[self.img_idx])
+        self.screen.display()
+
+        self.img_idx += 1
+        if self.img_idx >= len(self.image_list):
             self.finito()
+        else:
+            self.label_image_num.setText(str(self.img_idx + 1) + ' / ' + str(len(self.image_list)))
+
+    @pyqtSlot()
+    @handle_exceptions
+    def get_back(self):
+        if self.img_idx < 2:
+            return
+
+        self.img_idx -= 2;
+        file_name = basename(self.image_list[self.img_idx])
+
+        # remove file
+        if self.action_copy.isChecked():
+            n = len(self.class_labels)
+            for i in range(n):
+                file_path = join(self.target_folder, str(i), file_name)
+                if isfile(file_path):
+                    remove(file_path)
+                    print('Removed {}'.format(file_path))
+
+        # remove location row
+        path = join(self.target_folder, 'locations.csv')
+        if isfile(path):
+            with open(path, "r") as f:
+                lines = f.readlines()
+            with open(path, "w") as f:
+                for line in lines:
+                    if file_name not in line:
+                        f.write(line)
+
+        # display previous image
+        self.revive()
+        self.display_next()
+
+    @handle_exceptions
+    def revive(self):
+        class_checked = (self.class_labels is not None)
+        object_checked = self.object_detection_mode
+        self.set_buttons_enabled(class_checked)
+        self.table.setEnabled(class_checked)
+        self.button_save_roi.setEnabled(object_checked)
 
     @handle_exceptions
     def set_buttons_enabled(self, state):
@@ -106,28 +377,22 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     @handle_exceptions
-    def load_folder(self):
-        file_dialog = QFileDialog()
-        file_dialog.setFileMode(QFileDialog.Directory)
-        source_folder = str(file_dialog.getExistingDirectory(self))
-        if not self.target_folder:
-            self.target_folder = source_folder
-        pattern = join('**', '*.'+self.file_extension)
-        path = join(source_folder, pattern)
-        self.image_list = glob(path, recursive=True)
-        self.display_next()
-        self.restore_work()
+    def classify(self, class_nr):
+        if self.img_idx < len(self.image_list):
+            print('you classified as:', class_nr)
+            self.result_string += ',' + str(class_nr)
+            if self.action_copy.isChecked():
+                src_path = self.image_list[self.img_idx]
+                target_path = join(self.target_folder, str(class_nr), basename(src_path))
+                self.copy(src_path, target_path)
+            self.classified = True
+            if self.is_ready():
+                self.save_result()
+                self.display_and_increment()
+        else:
+            self.finito()
 
     @pyqtSlot()
-    @handle_exceptions
-    def set_target_folder(self):
-        file_dialog = QFileDialog()
-        file_dialog.setFileMode(QFileDialog.Directory)
-        self.target_folder = str(file_dialog.getExistingDirectory(self))
-        print('target folder:', self.target_folder)
-        if self.image_list:
-            self.restore_work()
-
     @handle_exceptions
     def add_location(self):
         self.located = True
@@ -136,160 +401,9 @@ class MainWindow(QMainWindow):
         if self.is_ready():
             self.save_result()
             self.display_next()
-        elif self.checkbox_class.isChecked():
+        elif self.class_labels is not None:
             self.set_buttons_enabled(True)
 
-    @handle_exceptions
-    def classify(self, class_nr):
-        if self.img_idx < len(self.image_list):
-            print('you classified as:', class_nr)
-            self.result_string += ','+str(class_nr)
-            if self.action_copy.isChecked():
-                src_path = self.image_list[self.img_idx]
-                target_path = join(self.target_folder, str(class_nr), basename(src_path))
-                self.copy(src_path, target_path)
-            self.classified = True
-            if self.is_ready():
-                self.save_result()
-                self.display_next()
-        else:
-            self.finito()
-
-    @pyqtSlot()
-    @handle_exceptions
-    def set_categories(self):
-        if self.num_of_classes.text():
-            n = int(self.num_of_classes.text())
-        else:
-            n = 0
-        self.create_buttons(n)
-        self.create_folders(n)
-        self.add_rows(n)
-
-    @handle_exceptions
-    def create_buttons(self, n):
-        stylesheet = """background: #ff655a;
-                        font:inherit;
-                        border: 1px solid grey;
-                        border-radius: 6px;
-                        adding: 0.25rem 1rem;
-                        margin-right: 1rem;
-                        color:white;
-                        height:40px;
-                        font-size: 18px;"""
-        for i in reversed(range(self.buttons_layout.count())):
-            self.buttons_layout.itemAt(i).widget().setParent(None)
-        for i in range(n):
-            button = QPushButton("class "+str(i))
-            button.setStyleSheet(stylesheet)
-            button.clicked.connect(lambda event, cls=i: self.classify(cls))
-            self.buttons_layout.addWidget(button)
-
-    @handle_exceptions
-    def create_folders(self, n):
-        for i in range(n):
-            folder_name = join(self.target_folder, str(i))
-            if not isdir(folder_name):
-                mkdir(folder_name)
-
-    @handle_exceptions
-    def add_rows(self, n):
-        self.table.setRowCount(0)
-        for i in range(n):
-            self.table.insertRow(self.table.rowCount())
-
-    @handle_exceptions
-    def restore_work(self, n=99):
-        labeled_imgs = set()
-        class_number = 0
-        for i in range(n):
-            folder_name = join(self.target_folder, str(i))
-            if isdir(folder_name):
-                file_list = glob(join(folder_name,'*'))
-                file_list = [basename(path) for path in file_list]
-                labeled_imgs.update(file_list)
-                class_number = i + 1
-
-        path = join(self.target_folder, 'locations.csv')
-        if isfile(path):
-            self.checkbox_object.setChecked(True)
-            with open(path, "r") as f:
-                lines = f.readlines()
-            file_list = [file_name.split(',')[0] for file_name in lines]
-            labeled_imgs.update(file_list)
-
-        for file in self.image_list:
-            if basename(file) in labeled_imgs:
-                self.img_idx += 1
-
-        if self.img_idx:
-            self.img_idx -= 1
-            self.display_next()
-
-        if class_number:
-            self.checkbox_class.setChecked(True)
-            self.num_of_classes.setText(str(class_number))
-            self.set_categories()
-
-    @handle_exceptions
-    def keyPressEvent(self, event):
-        # print(event.key())
-        if event.key() == 116777219:
-            self.get_back()
-        elif event.key() == 16777220 and self.checkbox_object.isChecked():
-            self.add_location()
-        elif event.key() == 16777234:
-            if self.checkbox_class and int(self.num_of_classes.text()) == 2:
-                self.classify(0)
-        elif event.key() == 16777236:
-            if self.checkbox_class and int(self.num_of_classes.text()) == 2:
-                self.classify(1)
-        else:
-            class_num = event.key() - 48
-            if self.num_of_classes.text() and class_num < int(self.num_of_classes.text()):
-                self.classify(class_num)
-        event.accept()
-
-    @pyqtSlot()
-    @handle_exceptions
-    def on_checkbox(self):
-        class_checked = self.checkbox_class.isChecked()
-        object_checked = self.checkbox_object.isChecked()
-        box_checked = self.box.isChecked()
-
-        self.label.setEnabled(class_checked)
-        self.num_of_classes.setEnabled(class_checked)
-        self.button_confirm.setEnabled(class_checked)
-        self.table.setEnabled(class_checked)
-
-        self.point.setEnabled(object_checked)
-        self.box.setEnabled(object_checked)
-        self.button_save_roi.setEnabled(object_checked)
-
-        state = class_checked and (not object_checked or (object_checked and self.located))
-        self.set_buttons_enabled(state)
-
-        if not object_checked:
-            self.screen.set_mode(0)
-        else:
-            if box_checked:
-                self.screen.set_mode(2)
-            else:
-                self.screen.set_mode(1)
-
-    @pyqtSlot()
-    @handle_exceptions
-    def on_toggle(self):
-        self.screen.display()
-        object_checked = self.checkbox_object.isChecked()
-        box_checked = self.box.isChecked()
-        if object_checked:
-            if box_checked:
-                self.screen.set_mode(2)
-            else:
-                self.screen.set_mode(1)
-
-    @pyqtSlot()
     @handle_exceptions
     def save_result(self):
         if self.img_idx < len(self.image_list):
@@ -301,67 +415,11 @@ class MainWindow(QMainWindow):
             self.finito()
 
     @handle_exceptions
-    def finito(self):
-        self.screen.canvas.axes.clear()
-        self.screen.canvas.draw()
-        self.set_buttons_enabled(False)
-        self.label.setEnabled(False)
-        self.table.setEnabled(False)
-        self.point.setEnabled(False)
-        self.box.setEnabled(False)
-        self.button_save_roi.setEnabled(False)
-
-    @handle_exceptions
-    def revive(self):
-        class_checked = self.checkbox_class.isChecked()
-        object_checked = self.checkbox_object.isChecked()
-        self.set_buttons_enabled(class_checked)
-        self.label.setEnabled(class_checked)
-        self.table.setEnabled(class_checked)
-        self.point.setEnabled(object_checked)
-        self.box.setEnabled(object_checked)
-        self.button_save_roi.setEnabled(object_checked)
-
-    @handle_exceptions
     def is_ready(self):
-        class_checked = self.checkbox_class.isChecked()
-        object_checked = self.checkbox_object.isChecked()
-
+        class_checked = (self.class_labels is not None)
+        object_checked = self.object_detection_mode
         status = (self.classified or not class_checked) and (self.located or not object_checked)
         return status
-
-    @pyqtSlot()
-    @handle_exceptions
-    def get_back(self):
-        if self.num_of_classes.text():
-            n = int(self.num_of_classes.text())
-        else:
-            n = 0
-        file_name = basename(self.image_list[self.img_idx-1])
-
-        # remove file
-        for i in range(n):
-            file_path = join(self.target_folder, str(i), file_name)
-            if isfile(file_path):
-                remove(file_path)
-                print('Removed {}'.format(file_path))
-
-        # remove location row
-        path = join(self.target_folder, 'locations.csv')
-        if isfile(path):
-            with open(path, "r") as f:
-                lines = f.readlines()
-            with open(path, "w") as f:
-                for line in lines:
-                    if file_name not in line:
-                        f.write(line)
-
-        # display previous image
-        if self.img_idx > 0:
-            self.img_idx -= 2
-            self.display_next()
-
-        self.revive()
 
     @handle_exceptions
     def copy(self, src_path, target_path):
@@ -369,8 +427,44 @@ class MainWindow(QMainWindow):
         process_thread.daemon = True
         process_thread.start()
 
+    @handle_exceptions
+    def keyPressEvent(self, event):
+        print(event.key())
+        class_checked = (self.class_labels is not None)
+        object_checked = self.object_detection_mode
+        if event.key() == 116777219:
+            self.get_back()
+        elif event.key() == 16777220 and object_checked:
+            self.add_location()
+        elif event.key() == 16777234:
+            if class_checked:
+                self.classify(0)
+        elif event.key() == 16777236:
+            if class_checked:
+                self.classify(1)
+        elif event.key() == 16777216:
+            self.closeEvent()
+        else:
+            class_num = event.key() - 48
+            if class_checked and class_num < len(self.class_labels):
+                self.classify(class_num)
+        event.accept()
+
+    @handle_exceptions
+    def finito(self):
+        self.screen.canvas.axes.clear()
+        self.screen.canvas.draw()
+        self.set_buttons_enabled(False)
+        self.table.setEnabled(False)
+        self.button_save_roi.setEnabled(False)
+
+    @handle_exceptions
+    def closeEvent(self):
+        self.save_settings()
+        self.close()
 
 ##########################################################################################
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
