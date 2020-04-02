@@ -46,7 +46,7 @@ class MainWindow(QMainWindow):
         self.classified = False
         self.located = False
         self.num_of_classes = None
-        self.object_detection_mode = False
+        self.object_detection_mode = 0
 
         self.class_labels = []
 
@@ -123,14 +123,14 @@ class MainWindow(QMainWindow):
         self.project_creator_dialog.checkbox_copy.stateChanged.connect(lambda state: self.action_copy.setChecked(state))
 
         def on_next_click():
-            self.object_detection_mode = self.project_creator_dialog.checkbox_object.isChecked()
-            if self.object_detection_mode:
+            if self.project_creator_dialog.checkbox_object.isChecked():
                 if self.project_creator_dialog.radio_point.isChecked():
-                    self.screen.set_mode(1)
+                    self.object_detection_mode = 1;
                 else:
-                    self.screen.set_mode(2)
+                    self.object_detection_mode = 2;
             else:
-                self.screen.set_mode(0)
+                self.object_detection_mode = 0;
+            self.screen.set_mode(self.object_detection_mode)
             if self.project_creator_dialog.check_class.isChecked():
                 self.num_of_classes = self.project_creator_dialog.comboBox.currentIndex() + 2
                 self.creator_step_4()
@@ -246,6 +246,8 @@ class MainWindow(QMainWindow):
             self.load_data()
             self.class_labels = settings['class_labels']
             self.object_detection_mode = settings['object_detection']
+            self.screen.set_mode(self.object_detection_mode)
+
             self.action_copy.setChecked(settings['copy_images'])
 
             self.start_labeling()
@@ -358,7 +360,7 @@ class MainWindow(QMainWindow):
 
     @handle_exceptions
     def revive(self):
-        class_checked = (self.class_labels is not None)
+        class_checked = len(self.class_labels)
         object_checked = self.object_detection_mode
         self.set_buttons_enabled(class_checked)
         self.table.setEnabled(class_checked)
@@ -425,8 +427,8 @@ class MainWindow(QMainWindow):
 
     @handle_exceptions
     def is_ready(self):
-        class_checked = (self.class_labels is not None)
-        object_checked = self.object_detection_mode
+        class_checked = (len(self.class_labels) > 0)
+        object_checked = (self.object_detection_mode > 0)
         status = (self.classified or not class_checked) and (self.located or not object_checked)
         return status
 
