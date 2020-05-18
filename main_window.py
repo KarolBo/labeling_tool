@@ -45,8 +45,8 @@ class MainWindow(QMainWindow):
         self.img_idx = 0
         self.classified = False
         self.locations = []
-        self.num_of_classes = None
-        self.num_of_objects = None
+        self.num_of_classes = 0
+        self.num_of_objects = 0
         self.object_detection_mode = 0
         self.object_idx = 0
 
@@ -54,6 +54,8 @@ class MainWindow(QMainWindow):
         self.object_names = []
 
         self.project_creator_dialog = None
+
+        self.hint_label.setStyleSheet("color: #e6e6e6")
 
         self.init_gui()
         self.connect_signals()
@@ -282,12 +284,13 @@ class MainWindow(QMainWindow):
             self.data_folder = settings['data_folder']
             self.load_data()
             self.class_labels = settings['class_labels']
+            self.num_of_classes = len(self.class_labels)
             self.object_names = settings['object_names']
             self.num_of_objects = len(self.object_names)
             self.object_detection_mode = settings['object_detection']
             self.screen.set_mode(self.object_detection_mode)
             self.action_copy.setChecked(settings['copy_images'])
-            self.reset_object_detection()
+            self.reset_state()
 
             self.start_labeling()
 
@@ -296,6 +299,7 @@ class MainWindow(QMainWindow):
         self.create_buttons()
         if self.class_labels:
             self.fill_class_table()
+        self.display_hint()
         self.display()
 
     @pyqtSlot()
@@ -341,11 +345,6 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     @handle_exceptions
     def display(self):
-        self.result_string = ''
-        self.located = self.classified = False
-        if self.object_detection_mode:
-            self.set_buttons_enabled(False)
-
         if self.file_extension == 'dcm':
             dcm_file = pydicom.dcmread(self.image_list[self.img_idx])
             self.screen.val_min, self.screen.val_max = self.get_windowing(dcm_file)
@@ -357,8 +356,11 @@ class MainWindow(QMainWindow):
         self.label_image_num.setText(str(self.img_idx + 1) + ' / ' + str(len(self.image_list)))
 
     @handle_exceptions
-    def reset_object_detection(self):
+    def reset_state(self):
+        self.result_string = ''
+        self.classified = False
         if self.object_detection_mode:
+            self.set_buttons_enabled(False)
             self.object_idx = 0
             self.locations = self.num_of_objects * [False]
 
@@ -366,7 +368,8 @@ class MainWindow(QMainWindow):
     @handle_exceptions
     def display_next(self):
         self.img_idx += 1
-        self.reset_object_detection()
+        self.reset_state()
+        self.display_hint()
         if self.img_idx < len(self.image_list):
             self.display()
         else:
@@ -476,10 +479,13 @@ class MainWindow(QMainWindow):
 
     @handle_exceptions
     def is_ready(self):
+        self.display_hint()
+
         class_checked = (len(self.class_labels) > 0)
         object_checked = (self.object_detection_mode > 0)
         located = (self.object_idx == len(self.object_names))
         status = (self.classified or not class_checked) and (located or not object_checked)
+
         return status
 
     @handle_exceptions
@@ -510,6 +516,13 @@ class MainWindow(QMainWindow):
             if class_checked and class_num < len(self.class_labels):
                 self.classify(class_num)
         event.accept()
+
+    @handle_exceptions
+    def display_hint(self):
+        if self.object_detection_mode and (self.object_idx < self.num_of_objects):
+            self.hint_label.setText('Mark the {}'.format(self.object_names[self.object_idx]))
+        elif self.num_of_classes:
+            self.hint_label.setText('Choose the class')
 
     @handle_exceptions
     def finito(self):
