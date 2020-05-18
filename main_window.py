@@ -12,7 +12,7 @@ import pydicom
 from shutil import copyfile
 import functools
 import threading
-from scipy.ndimage import imread
+from scipy.misc import imread
 import json
 
 
@@ -44,11 +44,14 @@ class MainWindow(QMainWindow):
         self.result_string = ''
         self.img_idx = 0
         self.classified = False
-        self.located = False
+        self.locations = []
         self.num_of_classes = None
+        self.num_of_objects = None
         self.object_detection_mode = 0
+        self.object_idx = 0
 
         self.class_labels = []
+        self.object_names = []
 
         self.project_creator_dialog = None
 
@@ -123,19 +126,22 @@ class MainWindow(QMainWindow):
         self.project_creator_dialog.checkbox_copy.stateChanged.connect(lambda state: self.action_copy.setChecked(state))
 
         def on_next_click():
+            next_step = self.setup_project
             if self.project_creator_dialog.checkbox_object.isChecked():
+                next_step = self.creator_step_5
+                self.num_of_objects = self.project_creator_dialog.combo_obj_num.currentIndex() + 1
                 if self.project_creator_dialog.radio_point.isChecked():
-                    self.object_detection_mode = 1;
+                    self.object_detection_mode = 1
                 else:
-                    self.object_detection_mode = 2;
+                    self.object_detection_mode = 2
             else:
-                self.object_detection_mode = 0;
+                self.object_detection_mode = 0
             self.screen.set_mode(self.object_detection_mode)
             if self.project_creator_dialog.check_class.isChecked():
                 self.num_of_classes = self.project_creator_dialog.comboBox.currentIndex() + 2
-                self.creator_step_4()
-            else:
-                self.setup_project()
+                next_step = self.creator_step_4
+
+            next_step()
 
         def on_class_check(state):
             self.project_creator_dialog.label_classes.setEnabled(state)
@@ -145,12 +151,13 @@ class MainWindow(QMainWindow):
         def on_object_check(state):
             self.project_creator_dialog.radio_point.setEnabled(state)
             self.project_creator_dialog.radio_square.setEnabled(state)
+            self.project_creator_dialog.combo_obj_num.setEnabled(state)
+            self.project_creator_dialog.label_2.setEnabled(state)
 
         self.project_creator_dialog.button_next.clicked.connect(on_next_click)
         self.project_creator_dialog.check_class.stateChanged.connect(on_class_check)
         self.project_creator_dialog.checkbox_object.stateChanged.connect(on_object_check)
 
-    @pyqtSlot()
     @handle_exceptions
     def creator_step_4(self):
         self.project_creator_dialog = loadUi(join(self.folder, 'class_names.ui'))
@@ -166,14 +173,42 @@ class MainWindow(QMainWindow):
             item = QTableWidgetItem('class {}'.format(i))
             self.project_creator_dialog.tableWidget.setItem(i, 1, item)
 
-        def on_begin():
+        def on_next():
             for i in range(self.num_of_classes):
                 label = self.project_creator_dialog.tableWidget.item(i, 1).text()
                 self.class_labels.append(label)
+            if self.object_detection_mode:
+                self.creator_step_5()
+            else:
+                self.setup_project()
+
+        self.project_creator_dialog.button_cancel.clicked.connect(self.project_creator_dialog.close)
+        self.project_creator_dialog.button_next.clicked.connect(on_next)
+
+    @handle_exceptions
+    def creator_step_5(self):
+        self.project_creator_dialog = loadUi(join(self.folder, 'class_names.ui'))
+        self.project_creator_dialog.setWindowFlags(
+            self.project_creator_dialog.windowFlags() | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
+            | Qt.X11BypassWindowManagerHint)
+        self.project_creator_dialog.show()
+
+        self.project_creator_dialog.tableWidget.setRowCount(self.num_of_objects)
+        for i in range(self.num_of_objects):
+            item = QTableWidgetItem(str(i))
+            self.project_creator_dialog.tableWidget.setItem(i, 0, item)
+            item = QTableWidgetItem('object {}'.format(i))
+            self.project_creator_dialog.tableWidget.setItem(i, 1, item)
+
+        def on_next():
+            for j in range(self.num_of_objects):
+                obj = self.project_creator_dialog.tableWidget.item(j, 1).text()
+                self.object_names.append(obj)
+            self.locations = self.num_of_objects * [False]
             self.setup_project()
 
         self.project_creator_dialog.button_cancel.clicked.connect(self.project_creator_dialog.close)
-        self.project_creator_dialog.button_next.clicked.connect(on_begin)
+        self.project_creator_dialog.button_next.clicked.connect(on_next)
 
     @pyqtSlot()
     @handle_exceptions
@@ -214,6 +249,7 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     @handle_exceptions
     def setup_project(self):
+        print(self.object_names)
         self.project_creator_dialog = None
         if self.action_copy.isChecked():
             self.create_folders()
@@ -225,6 +261,7 @@ class MainWindow(QMainWindow):
         settings = {'data_folder': self.data_folder,
                     'class_labels': self.class_labels,
                     'object_detection': self.object_detection_mode,
+                    'object_names': self.object_names,
                     'last_image': self.img_idx,
                     'copy_images': self.action_copy.isChecked()}
         path = join(self.project_folder, 'settings.json')
@@ -245,10 +282,12 @@ class MainWindow(QMainWindow):
             self.data_folder = settings['data_folder']
             self.load_data()
             self.class_labels = settings['class_labels']
+            self.object_names = settings['object_names']
+            self.num_of_objects = len(self.object_names)
             self.object_detection_mode = settings['object_detection']
             self.screen.set_mode(self.object_detection_mode)
-
             self.action_copy.setChecked(settings['copy_images'])
+            self.reset_object_detection()
 
             self.start_labeling()
 
@@ -317,10 +356,17 @@ class MainWindow(QMainWindow):
 
         self.label_image_num.setText(str(self.img_idx + 1) + ' / ' + str(len(self.image_list)))
 
+    @handle_exceptions
+    def reset_object_detection(self):
+        if self.object_detection_mode:
+            self.object_idx = 0
+            self.locations = self.num_of_objects * [False]
+
     @pyqtSlot()
     @handle_exceptions
     def display_next(self):
         self.img_idx += 1
+        self.reset_object_detection()
         if self.img_idx < len(self.image_list):
             self.display()
         else:
@@ -391,7 +437,7 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     @handle_exceptions
     def classify(self, class_nr):
-        print('siema', self.img_idx, len(self.image_list))
+        # print('hello', self.img_idx, len(self.image_list))
         if self.img_idx <= len(self.image_list):
             print('classify', self.img_idx, len(self.image_list))
             print('you classified as:', class_nr)
@@ -408,13 +454,16 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     @handle_exceptions
     def add_location(self):
-        self.located = True
+        if self.object_idx >= len(self.object_names):
+            return
+        self.locations[self.object_idx] = True
+        self.object_idx += 1
         self.screen.draw_point('lawngreen')
         self.result_string += ','+str(self.screen.location).strip('()')
         if self.is_ready():
             self.save_result()
             self.display_next()
-        elif self.class_labels is not None:
+        elif self.class_labels is not None and self.object_idx == len(self.object_names):
             self.set_buttons_enabled(True)
 
     @handle_exceptions
@@ -429,7 +478,8 @@ class MainWindow(QMainWindow):
     def is_ready(self):
         class_checked = (len(self.class_labels) > 0)
         object_checked = (self.object_detection_mode > 0)
-        status = (self.classified or not class_checked) and (self.located or not object_checked)
+        located = (self.object_idx == len(self.object_names))
+        status = (self.classified or not class_checked) and (located or not object_checked)
         return status
 
     @handle_exceptions
