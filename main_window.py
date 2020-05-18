@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QTableWidgetItem, QHeaderView, QActionGroup, \
                             QPushButton
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QIntValidator
 from PyQt5.uic import loadUi
 from PyQt5.QtCore import Qt
 from glob import glob
@@ -55,8 +55,6 @@ class MainWindow(QMainWindow):
 
         self.project_creator_dialog = None
 
-        self.hint_label.setStyleSheet("color: #e6e6e6")
-
         self.init_gui()
         self.connect_signals()
 
@@ -65,7 +63,7 @@ class MainWindow(QMainWindow):
         self.menuBar().setNativeMenuBar(False)
         self.setWindowTitle("The Most Awesome Labelling Tool in the World!")
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        # self.num_of_classes.setValidator(QIntValidator(0, 100, self))
+        self.line_image_idx.setValidator(QIntValidator(0, 100, self))
 
         extension_group = QActionGroup(self)
         extension_group.addAction(self.actionDICOM)
@@ -87,6 +85,15 @@ class MainWindow(QMainWindow):
         self.button_save_roi.clicked.connect(self.add_location)
         self.button_skip.clicked.connect(self.display_next)
         self.button_back.clicked.connect(self.get_back)
+
+        self.button_jump.clicked.connect(self.jump_to_img)
+
+    @pyqtSlot()
+    @handle_exceptions
+    def jump_to_img(self):
+        self.reset_state()
+        self.img_idx = int(self.line_image_idx.text())-1
+        self.display()
 
     @pyqtSlot()
     def assign_extension(self, extension):
@@ -354,7 +361,8 @@ class MainWindow(QMainWindow):
             self.screen.data_array = imread(self.image_list[self.img_idx])
         self.screen.display()
 
-        self.label_image_num.setText(str(self.img_idx + 1) + ' / ' + str(len(self.image_list)))
+        self.line_image_idx.setText(str(self.img_idx + 1))
+        self.label_total_images.setText(' / ' + str(len(self.image_list)))
 
     @handle_exceptions
     def reset_state(self):
