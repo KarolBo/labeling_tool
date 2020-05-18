@@ -42,6 +42,8 @@ class MplWidget(QWidget):
         self.location = None
         self.mode = Mode.nothing
 
+        self.points = []
+
     @handle_exceptions
     def display(self):
         self.canvas.axes.clear()
@@ -107,7 +109,7 @@ class MplWidget(QWidget):
                 y = self.y / self.data_array.shape[0]
                 self.location = (x, y)
                 self.display()
-                self.draw_point('red')
+                self.points.append(self.draw_point('red'))
     
     def draw_point(self, color):
         self.canvas.axes.scatter(self.x, self.y, c=color)
