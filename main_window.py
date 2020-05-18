@@ -295,6 +295,7 @@ class MainWindow(QMainWindow):
         self.create_buttons()
         if self.class_labels:
             self.fill_class_table()
+        self.button_save_roi.setEnabled(self.object_detection_mode)
         self.display_hint()
         self.display()
 
@@ -413,16 +414,8 @@ class MainWindow(QMainWindow):
                         f.write(line)
 
         # display previous image
-        self.revive()
         self.display()
-
-    @handle_exceptions
-    def revive(self):
-        class_checked = len(self.class_labels)
-        object_checked = self.object_detection_mode
-        self.set_buttons_enabled(class_checked)
-        self.table.setEnabled(class_checked)
-        self.button_save_roi.setEnabled(object_checked)
+        self.display_hint()
 
     @handle_exceptions
     def set_buttons_enabled(self, state):
