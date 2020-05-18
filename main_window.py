@@ -173,11 +173,12 @@ class MainWindow(QMainWindow):
             item = QTableWidgetItem(str(i))
             self.project_creator_dialog.tableWidget.setItem(i, 0, item)
             item = QTableWidgetItem('class {}'.format(i))
+            # item.setFlags(item.flags() | Qt.ItemIsEditable)
             self.project_creator_dialog.tableWidget.setItem(i, 1, item)
 
         def on_next():
-            for i in range(self.num_of_classes):
-                label = self.project_creator_dialog.tableWidget.item(i, 1).text()
+            for j in range(self.num_of_classes):
+                label = self.project_creator_dialog.tableWidget.item(j, 1).text()
                 self.class_labels.append(label)
             if self.object_detection_mode:
                 self.creator_step_5()
