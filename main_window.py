@@ -90,17 +90,6 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     @handle_exceptions
-    def jump_to_img(self):
-        self.reset_state()
-        self.img_idx = int(self.line_image_idx.text())-1
-        self.display()
-
-    @pyqtSlot()
-    def assign_extension(self, extension):
-        self.file_extension = extension
-
-    @pyqtSlot()
-    @handle_exceptions
     def creator_step_1(self):
         self.project_creator_dialog = loadUi(join(self.folder, 'select_folder.ui'))
         self.project_creator_dialog.setWindowFlags(
@@ -259,7 +248,6 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     @handle_exceptions
     def setup_project(self):
-        print(self.object_names)
         self.project_creator_dialog = None
         if self.action_copy.isChecked():
             self.create_folders()
@@ -386,6 +374,18 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     @handle_exceptions
+    def jump_to_img(self):
+        self.reset_state()
+        self.img_idx = int(self.line_image_idx.text())-1
+        self.display()
+        self.display_hint()
+
+    @pyqtSlot()
+    def assign_extension(self, extension):
+        self.file_extension = extension
+
+    @pyqtSlot()
+    @handle_exceptions
     def get_back(self):
         if self.img_idx < 1:
             return
@@ -470,6 +470,7 @@ class MainWindow(QMainWindow):
             return
         self.locations[self.object_idx] = True
         self.object_idx += 1
+        # self.screen.points[0].remove()
         self.screen.draw_point('lawngreen')
         self.result_string += ','+str(self.screen.location).strip('()')
         if self.is_ready():

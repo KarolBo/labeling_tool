@@ -147,6 +147,9 @@
                <pointsize>14</pointsize>
               </font>
              </property>
+             <property name="focusPolicy">
+              <enum>Qt::ClickFocus</enum>
+             </property>
              <property name="styleSheet">
               <string notr="true">color:white;
 background: #272727;</string>
