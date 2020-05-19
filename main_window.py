@@ -294,6 +294,7 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     @handle_exceptions
     def setup_project(self):
+        self.img_idx = 0
         self.project_creator_dialog = None
         if self.action_copy.isChecked():
             self.create_folders()
