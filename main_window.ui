@@ -753,6 +753,11 @@ height:40px;
     <string>DICOM</string>
    </property>
   </action>
+  <action name="actionCC">
+   <property name="text">
+    <string>CC</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
