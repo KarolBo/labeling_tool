@@ -38,7 +38,7 @@ class MainWindow(QMainWindow):
         loadUi(join(self.folder, 'main_window.ui'), self)
 
         self.file_extension = 'dcm'
-        self.image_list = ''
+        self.image_list = []
         self.data_folder = ''
         self.project_folder = ''
         self.result_string = ''
@@ -55,6 +55,9 @@ class MainWindow(QMainWindow):
 
         self.project_creator_dialog = None
 
+        # DICOM Filters
+        self.eval_cc = self.eval_mlo = self.eval_mammo = self.eval_tomo = False
+
         self.init_gui()
         self.connect_signals()
 
@@ -63,7 +66,7 @@ class MainWindow(QMainWindow):
         self.menuBar().setNativeMenuBar(False)
         self.setWindowTitle("The Most Awesome Labelling Tool in the World!")
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.line_image_idx.setValidator(QIntValidator(0, 100, self))
+        self.line_image_idx.setValidator(QIntValidator(0, 99999, self))
 
         extension_group = QActionGroup(self)
         extension_group.addAction(self.actionDICOM)
@@ -114,6 +117,32 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     @handle_exceptions
     def creator_step_3(self):
+        self.project_creator_dialog = loadUi(join(self.folder, 'options.ui'))
+        self.project_creator_dialog.setWindowFlags(
+            self.project_creator_dialog.windowFlags() | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
+            | Qt.X11BypassWindowManagerHint)
+        self.project_creator_dialog.show()
+        self.project_creator_dialog.button_cancel.clicked.connect(self.project_creator_dialog.close)
+
+        def on_check(_):
+            self.eval_cc = self.project_creator_dialog.checkbox_cc.isChecked()
+            self.eval_mlo = self.project_creator_dialog.checkbox_mlo.isChecked()
+            self.eval_mammo = self.project_creator_dialog.checkbox_mammo.isChecked()
+            self.eval_tomo = self.project_creator_dialog.checkbox_thomo.isChecked()
+
+        def on_next():
+            self.filter_dicoms()
+            self.creator_step_4()
+
+        self.project_creator_dialog.button_next.clicked.connect(on_next)
+        self.project_creator_dialog.checkbox_cc.stateChanged.connect(on_check)
+        self.project_creator_dialog.checkbox_mlo.stateChanged.connect(on_check)
+        self.project_creator_dialog.checkbox_mammo.stateChanged.connect(on_check)
+        self.project_creator_dialog.checkbox_thomo.stateChanged.connect(on_check)
+
+    @pyqtSlot()
+    @handle_exceptions
+    def creator_step_4(self):
         self.project_creator_dialog = loadUi(join(self.folder, 'select_actions.ui'))
         self.project_creator_dialog.setWindowFlags(
             self.project_creator_dialog.windowFlags() | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
@@ -126,7 +155,7 @@ class MainWindow(QMainWindow):
         def on_next_click():
             next_step = self.setup_project
             if self.project_creator_dialog.checkbox_object.isChecked():
-                next_step = self.creator_step_5
+                next_step = self.creator_step_6
                 self.num_of_objects = self.project_creator_dialog.combo_obj_num.currentIndex() + 1
                 if self.project_creator_dialog.radio_point.isChecked():
                     self.object_detection_mode = 1
@@ -137,7 +166,7 @@ class MainWindow(QMainWindow):
             self.screen.set_mode(self.object_detection_mode)
             if self.project_creator_dialog.check_class.isChecked():
                 self.num_of_classes = self.project_creator_dialog.comboBox.currentIndex() + 2
-                next_step = self.creator_step_4
+                next_step = self.creator_step_5
 
             next_step()
 
@@ -157,7 +186,7 @@ class MainWindow(QMainWindow):
         self.project_creator_dialog.checkbox_object.stateChanged.connect(on_object_check)
 
     @handle_exceptions
-    def creator_step_4(self):
+    def creator_step_5(self):
         self.project_creator_dialog = loadUi(join(self.folder, 'class_names.ui'))
         self.project_creator_dialog.setWindowFlags(
             self.project_creator_dialog.windowFlags() | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
@@ -177,7 +206,7 @@ class MainWindow(QMainWindow):
                 label = self.project_creator_dialog.tableWidget.item(j, 1).text()
                 self.class_labels.append(label)
             if self.object_detection_mode:
-                self.creator_step_5()
+                self.creator_step_6()
             else:
                 self.setup_project()
 
@@ -185,7 +214,7 @@ class MainWindow(QMainWindow):
         self.project_creator_dialog.button_next.clicked.connect(on_next)
 
     @handle_exceptions
-    def creator_step_5(self):
+    def creator_step_6(self):
         self.project_creator_dialog = loadUi(join(self.folder, 'class_names.ui'))
         self.project_creator_dialog.setWindowFlags(
             self.project_creator_dialog.windowFlags() | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
@@ -245,9 +274,27 @@ class MainWindow(QMainWindow):
         path = join(self.data_folder, pattern)
         self.image_list = glob(path, recursive=True)
 
+    @handle_exceptions
+    def filter_dicoms(self):
+        if self.eval_cc and self.eval_mlo and self.eval_mammo and self.eval_tomo:
+            return
+        new_list = []
+        # print(self.eval_cc, self.eval_mlo, self.eval_mammo, self.eval_mammo)
+        for filename in self.image_list:
+            dcm = pydicom.read_file(filename)
+            projection = dcm.ViewPosition
+            study_description = dcm.StudyDescription
+            is_tomo = True if "recon" in study_description.lower() else False
+            if ((self.eval_mlo and 'mlo' in projection.lower()) or (self.eval_cc and 'cc' in projection.lower())) and \
+               ((self.eval_mammo and not is_tomo) or (self.eval_tomo and is_tomo)):
+                new_list.append(filename)
+
+        self.image_list = new_list
+
     @pyqtSlot()
     @handle_exceptions
     def setup_project(self):
+        self.img_idx = 0
         self.project_creator_dialog = None
         if self.action_copy.isChecked():
             self.create_folders()
@@ -261,7 +308,11 @@ class MainWindow(QMainWindow):
                     'object_detection': self.object_detection_mode,
                     'object_names': self.object_names,
                     'last_image': self.img_idx,
-                    'copy_images': self.action_copy.isChecked()}
+                    'copy_images': self.action_copy.isChecked(),
+                    'eval_cc': self.eval_cc,
+                    'eval_mlo': self.eval_mlo,
+                    'eval_mammo': self.eval_mammo,
+                    'eval_tomo': self.eval_tomo}
         path = join(self.project_folder, 'settings.json')
         with open(path, 'w') as json_file:
             json.dump(settings, json_file)
@@ -286,6 +337,11 @@ class MainWindow(QMainWindow):
             self.object_detection_mode = settings['object_detection']
             self.screen.set_mode(self.object_detection_mode)
             self.action_copy.setChecked(settings['copy_images'])
+            self.eval_cc = settings['eval_cc']
+            self.eval_mlo = settings['eval_mlo']
+            self.eval_mammo = settings['eval_mammo']
+            self.eval_tomo = settings['eval_tomo']
+            self.filter_dicoms()
             self.reset_state()
 
             self.start_labeling()
@@ -546,5 +602,5 @@ class MainWindow(QMainWindow):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = MainWindow()
-    window.showFullScreen()
+    window.show()
     app.exec_()
