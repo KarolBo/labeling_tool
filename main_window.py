@@ -54,9 +54,9 @@ class MainWindow(QMainWindow):
         self.object_names = []
 
         self.project_creator_dialog = None
-
-        # DICOM Filters
-        self.eval_cc = self.eval_mlo = self.eval_mammo = self.eval_tomo = False
+        self.comments_dialog = None
+        self.eval_cc = self.eval_mlo = self.eval_mammo = self.eval_tomo = True
+        self.comment = ''
 
         self.init_gui()
         self.connect_signals()
@@ -90,6 +90,7 @@ class MainWindow(QMainWindow):
         self.button_back.clicked.connect(self.get_back)
 
         self.button_jump.clicked.connect(self.jump_to_img)
+        self.button_comment.clicked.connect(self.show_comments_dialog)
 
     @pyqtSlot()
     @handle_exceptions
@@ -279,7 +280,6 @@ class MainWindow(QMainWindow):
         if self.eval_cc and self.eval_mlo and self.eval_mammo and self.eval_tomo:
             return
         new_list = []
-        # print(self.eval_cc, self.eval_mlo, self.eval_mammo, self.eval_mammo)
         for filename in self.image_list:
             dcm = pydicom.read_file(filename)
             projection = dcm.ViewPosition
@@ -299,6 +299,7 @@ class MainWindow(QMainWindow):
         if self.action_copy.isChecked():
             self.create_folders()
         self.save_settings()
+        self.create_result_file()
         self.start_labeling()
 
     @handle_exceptions
@@ -528,9 +529,27 @@ class MainWindow(QMainWindow):
             self.set_buttons_enabled(True)
 
     @handle_exceptions
+    def create_result_file(self, name='annotations'):
+        path = join(self.project_folder, name+'.csv')
+        if isfile(path):
+            return
+        with open(path, 'w') as file:
+            headers = 'file'
+            for obj in self.object_names:
+                headers += ','+obj+' x'
+                headers += ','+obj+' y'
+            if self.class_labels:
+                headers += ',class'
+            headers += ',comments'
+
+            file.write(headers + '\n')
+
+    @handle_exceptions
     def save_result(self):
         if self.img_idx <= len(self.image_list):
             path = join(self.project_folder, 'annotations.csv')
+            if self.comment:
+                self.result_string += ','+self.comment
             with open(path, 'a+') as file:
                 filename = basename(self.image_list[self.img_idx])
                 file.write(filename+self.result_string+'\n')
@@ -581,6 +600,36 @@ class MainWindow(QMainWindow):
             self.hint_label.setText('Mark the {}'.format(self.object_names[self.object_idx]))
         elif self.num_of_classes:
             self.hint_label.setText('Choose the class')
+
+    @pyqtSlot()
+    @handle_exceptions
+    def show_comments_dialog(self):
+        self.comments_dialog = loadUi(join(self.folder, 'comments.ui'))
+        self.comments_dialog.setWindowFlags(self.comments_dialog.windowFlags() | Qt.FramelessWindowHint
+                                            | Qt.WindowStaysOnTopHint | Qt.X11BypassWindowManagerHint)
+        self.comments_dialog.show()
+
+        def on_other():
+            state = self.comments_dialog.button_other.isChecked()
+            self.comments_dialog.lineEdit.setEnabled(state)
+
+        def on_save():
+            if self.comments_dialog.button_other.isChecked():
+                self.comment = self.comments_dialog.lineEdit.text()
+            elif self.comments_dialog.button_implants.isChecked():
+                self.comment = 'implants'
+            elif self.comments_dialog.button_surgery.isChecked():
+                self.comment = 'surgery'
+            elif self.comments_dialog.button_reduction.isChecked():
+                self.comment = 'size reduction'
+            self.comments_dialog = None
+
+        def on_cancel():
+            self.comments_dialog = None
+
+        self.comments_dialog.button_other.clicked.connect(on_other)
+        self.comments_dialog.button_cancel.clicked.connect(on_cancel)
+        self.comments_dialog.button_save.clicked.connect(on_save)
 
     @handle_exceptions
     def finito(self):
