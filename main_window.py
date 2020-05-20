@@ -12,7 +12,8 @@ from shutil import copyfile
 import threading
 from scipy.misc import imread
 import json
-from tutorial import Tutorial, handle_exceptions
+from tutorial import Tutorial
+from settings import Settings, handle_exceptions
 
 
 class MainWindow(QMainWindow):
@@ -24,28 +25,14 @@ class MainWindow(QMainWindow):
         self.folder = getattr(sys, '_MEIPASS', abspath('.'))
         loadUi(join(self.folder, 'main_window.ui'), self)
 
-        self.project_name = ''
-        self.author = ''
-        self.institution = ''
-        self.file_extension = 'dcm'
+        self.settings = None
         self.image_list = []
-        self.data_folder = ''
-        self.project_folder = ''
         self.result_string = ''
-        self.img_idx = 0
         self.classified = False
-        self.copy_files = False
         self.locations = []
-        self.object_detection_mode = 0
         self.object_idx = 0
 
-        self.class_labels = []
-        self.object_names = []
-
-        self.project_creator_dialog = None
-        self.comments_dialog = None
-        self.eval_cc = self.eval_mlo = self.eval_mammo = self.eval_tomo = True
-        self.comment = ''
+        self.postop = ''
 
         self.init_gui()
         self.connect_signals()
@@ -67,7 +54,7 @@ class MainWindow(QMainWindow):
 
     @handle_exceptions
     def connect_signals(self):
-        self.menu_new.triggered.connect(self.start_tutorial)
+        self.menu_new.triggered.connect(self.new_project)
         self.menu_continue.triggered.connect(self.load_settings)
 
         self.action_copy.triggered.connect(self.create_folders)
@@ -80,8 +67,21 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     @handle_exceptions
-    def start_tutorial(self):
-        tutorial = Tutorial()
+    def new_project(self):
+        self.settings = Tutorial().settings
+        self.start_project()
+
+    @pyqtSlot()
+    @handle_exceptions
+    def continue_project(self):
+        file_dialog = QFileDialog()
+        file_dialog.setFileMode(QFileDialog.Directory)
+        project_folder = str(file_dialog.getExistingDirectory(self))
+        path = join(project_folder, 'settings.json')
+        if exists(path):
+            self.settings = Settings()
+            self.settings.load(path)
+        self.start_project()
 
     @handle_exceptions
     def load_data(self):
@@ -120,30 +120,6 @@ class MainWindow(QMainWindow):
         path = join(self.project_folder, 'settings.json')
         with open(path, 'w') as json_file:
             json.dump(settings, json_file)
-
-    @pyqtSlot()
-    @handle_exceptions
-    def load_settings(self):
-        file_dialog = QFileDialog()
-        file_dialog.setFileMode(QFileDialog.Directory)
-        self.project_folder = str(file_dialog.getExistingDirectory(self))
-        path = join(self.project_folder, 'settings.json')
-        if exists(path):
-            with open(path, 'r') as json_file:
-                settings = json.load(json_file)
-
-            self.img_idx = settings['last_image']
-            self.data_folder = settings['data_folder']
-            self.class_labels = settings['class_labels']
-            self.object_names = settings['object_names']
-            self.object_detection_mode = settings['object_detection']
-            self.copy_files = settings['copy_images']
-            self.eval_cc = settings['eval_cc']
-            self.eval_mlo = settings['eval_mlo']
-            self.eval_mammo = settings['eval_mammo']
-            self.eval_tomo = settings['eval_tomo']
-
-            self.start_project()
 
     @handle_exceptions
     def start_project(self):
@@ -222,7 +198,7 @@ class MainWindow(QMainWindow):
         if self.object_detection_mode:
             self.set_buttons_enabled(False)
             self.object_idx = 0
-            self.locations = self.num_of_objects * [False]
+            self.locations = len(self.object_names) * [False]
 
     @pyqtSlot()
     @handle_exceptions
@@ -397,9 +373,9 @@ class MainWindow(QMainWindow):
 
     @handle_exceptions
     def display_hint(self):
-        if self.object_detection_mode and (self.object_idx < self.num_of_objects):
+        if self.object_detection_mode and (self.object_idx < len(self.object_names)):
             self.hint_label.setText('Mark the {}'.format(self.object_names[self.object_idx]))
-        elif self.num_of_classes:
+        elif len(self.class_labels):
             self.hint_label.setText('Choose the class')
 
     @handle_exceptions
