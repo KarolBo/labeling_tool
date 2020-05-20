@@ -463,7 +463,6 @@ class MainWindow(QMainWindow):
             return
         self.locations[self.object_idx] = True
         self.object_idx += 1
-        # self.screen.points[0].remove()
         self.screen.draw_point('lawngreen')
         self.result_string += ','+str(self.screen.location).strip('()')
         if self.is_ready():

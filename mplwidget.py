@@ -42,7 +42,7 @@ class MplWidget(QWidget):
         self.location = None
         self.mode = Mode.nothing
 
-        self.points = []
+        self.red_point = None
 
     @handle_exceptions
     def display(self):
@@ -92,14 +92,12 @@ class MplWidget(QWidget):
                     self.val_min = new_min
                 if new_max <= self.data_array.max():
                     self.val_max = new_max
-                self.display()
             self.x = x
             self.y = y
 
     @handle_exceptions
     def mouse_press(self, event):
-        if (event.xdata is not None and 
-            event.ydata is not None):
+        if event.xdata is not None and event.ydata is not None:
             self.x = event.xdata
             self.y = event.ydata
             button_number = event.button if type(event.button) is int else event.button.value
@@ -108,9 +106,13 @@ class MplWidget(QWidget):
                 x = self.x / self.data_array.shape[1]
                 y = self.y / self.data_array.shape[0]
                 self.location = (x, y)
-                self.display()
-                self.points.append(self.draw_point('red'))
-    
+                self.draw_point('red')
+
     def draw_point(self, color):
-        self.canvas.axes.scatter(self.x, self.y, c=color)
+        point = self.canvas.axes.scatter(self.x, self.y, c=color)
+        if self.red_point is not None:
+            self.red_point.remove()
+            self.red_point = None
+        if color == 'red':
+            self.red_point = point
         self.canvas.draw()
