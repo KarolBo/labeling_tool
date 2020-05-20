@@ -9,10 +9,11 @@ from settings import Settings, handle_exceptions
 
 
 class Tutorial:
-    def __init__(self):
+    def __init__(self, parent):
         self.folder = getattr(sys, '_MEIPASS', abspath('.'))
         self.project_creator_dialog = None
         self.settings = Settings()
+        self.start_project = lambda: parent.start_project(self.settings)
 
         self.step_1()
 
@@ -60,7 +61,7 @@ class Tutorial:
         file_dialog.setFileMode(QFileDialog.Directory)
         self.settings.project_folder = str(file_dialog.getExistingDirectory(self.project_creator_dialog))
         self.project_creator_dialog.setVisible(True)
-        self.project_creator_dialog.line_proj_folder.setText(self.project_folder)
+        self.project_creator_dialog.line_proj_folder.setText(self.settings.project_folder)
 
         self.eval_step_1()
 
@@ -71,7 +72,7 @@ class Tutorial:
         file_dialog.setFileMode(QFileDialog.Directory)
         self.settings.data_folder = str(file_dialog.getExistingDirectory(self.project_creator_dialog))
         self.project_creator_dialog.setVisible(True)
-        self.project_creator_dialog.line_data_folder.setText(self.data_folder)
+        self.project_creator_dialog.line_data_folder.setText(self.settings.data_folder)
 
         self.eval_step_1()
 
@@ -109,7 +110,7 @@ class Tutorial:
         def on_next_click():
             self.settings.copy_files = self.project_creator_dialog.checkbox_copy.isChecked()
 
-            next_step = None
+            next_step = self.finito
             if self.project_creator_dialog.checkbox_object.isChecked():
                 next_step = self.step_4
                 self.settings.object_names = (self.project_creator_dialog.combo_obj_num.currentIndex() + 1) * ['']
@@ -125,8 +126,7 @@ class Tutorial:
                 self.settings.class_labels = (self.project_creator_dialog.comboBox.currentIndex() + 2) * ['']
                 next_step = self.step_3
 
-            if next_step is not None:
-                next_step()
+            next_step()
 
         self.project_creator_dialog.check_class.stateChanged.connect(on_class_check)
         self.project_creator_dialog.checkbox_object.stateChanged.connect(on_object_check)
@@ -155,6 +155,8 @@ class Tutorial:
                 self.settings.class_labels[j] = label
             if self.settings.object_detection_mode:
                 self.step_4()
+            else:
+                self.finito()
 
         self.project_creator_dialog.button_cancel.clicked.connect(self.project_creator_dialog.close)
         self.project_creator_dialog.button_next.clicked.connect(on_next)
@@ -179,9 +181,15 @@ class Tutorial:
             for j in range(len(self.settings.object_names)):
                 obj = self.project_creator_dialog.tableWidget.item(j, 1).text()
                 self.settings.object_names[j] = obj
+            self.finito()
 
         self.project_creator_dialog.button_cancel.clicked.connect(self.project_creator_dialog.close)
         self.project_creator_dialog.button_next.clicked.connect(on_next)
+
+    @handle_exceptions
+    def finito(self):
+        self.project_creator_dialog = None
+        self.start_project()
 
 
 
