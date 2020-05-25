@@ -1,9 +1,4 @@
 <application>
-  <component name="GithubAccounts">
-    <account id="511ac774-2793-40bc-a497-1dcb96d74777" name="KarolBo">
-      <server host="github.com" />
-    </account>
-  </component>
   <component name="GithubSettings">
     <option name="CREATE_PULL_REQUEST_CREATE_REMOTE" value="YES" />
   </component>
