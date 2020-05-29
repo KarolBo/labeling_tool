@@ -6,7 +6,7 @@ from glob import glob
 from os.path import join, isdir, basename, isfile, abspath, exists
 from os import mkdir, remove
 import sys
-from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtCore import pyqtSlot, Qt
 import pydicom
 from shutil import copyfile
 import threading
@@ -31,10 +31,20 @@ class MainWindow(QMainWindow):
         self.locations = []
         self.object_idx = 0
 
-        self.postop = ''
-
         self.init_gui()
         self.connect_signals()
+
+        self.start_dialog = None
+        self.show_start_dialog()
+
+    @handle_exceptions
+    def show_start_dialog(self):
+        self.start_dialog = loadUi(join(self.folder, 'start_dialog.ui'))
+        self.start_dialog.setWindowFlags(self.start_dialog.windowFlags() | Qt.FramelessWindowHint
+                                         | Qt.WindowStaysOnTopHint | Qt.X11BypassWindowManagerHint)
+        self.start_dialog.button_new.clicked.connect(self.new_project)
+        self.start_dialog.button_continue.clicked.connect(self.continue_project)
+        self.start_dialog.show()
 
     @handle_exceptions
     def init_gui(self):
@@ -53,9 +63,6 @@ class MainWindow(QMainWindow):
 
     @handle_exceptions
     def connect_signals(self):
-        self.menu_new.triggered.connect(self.new_project)
-        self.menu_continue.triggered.connect(self.continue_project)
-
         self.action_copy.triggered.connect(self.create_folders)
 
         self.button_save_roi.clicked.connect(self.add_location)
@@ -79,7 +86,7 @@ class MainWindow(QMainWindow):
         if exists(path):
             settings = Settings()
             settings.load(path)
-        self.start_project(settings)
+            self.start_project(settings)
 
     @handle_exceptions
     def load_data(self):
@@ -91,23 +98,40 @@ class MainWindow(QMainWindow):
     def filter_dicoms(self):
         if self.settings.eval_cc and self.settings.eval_mlo and self.settings.eval_mammo and self.settings.eval_tomo:
             return
+
+        msgBox = loadUi(join(self.folder, 'msg.ui'))
+        msgBox.show()
+
         new_list = []
         for filename in self.image_list:
             dcm = pydicom.read_file(filename)
-            projection = dcm.ViewPosition
-            study_description = dcm.StudyDescription
+            try:
+                projection = dcm.ViewPosition
+            except:
+                projection = "cc mlo"
+            try:
+                study_description = dcm.StudyDescription
+            except:
+                study_description = "mammo"
             is_tomo = True if "recon" in study_description.lower() else False
-            if ((self.eval_mlo and 'mlo' in projection.lower()) or (self.eval_cc and 'cc' in projection.lower())) and \
-               ((self.eval_mammo and not is_tomo) or (self.eval_tomo and is_tomo)):
+            mlo = 'mlo' in projection.lower()
+            cc = 'cc' in projection.lower()
+            if ((self.settings.eval_mlo and mlo) or (self.settings.eval_cc and cc)) and \
+               ((self.settings.eval_mammo and not is_tomo) or (self.settings.eval_tomo and is_tomo)):
                 new_list.append(filename)
+                print(filename)
 
+        print('filtering accomplished')
         self.image_list = new_list
 
     @handle_exceptions
     def start_project(self, settings):
+        del self.start_dialog
+        self.start_dialog = None
         self.settings = settings
         self.load_data()
         self.filter_dicoms()
+        self.show()
         self.screen.set_mode(self.settings.object_detection_mode)
         self.reset_state()
         if self.settings.copy_files:
@@ -182,6 +206,11 @@ class MainWindow(QMainWindow):
             self.set_buttons_enabled(False)
             self.object_idx = 0
             self.locations = len(self.settings.object_names) * [False]
+
+        self.checkbox_implants.setChecked(False)
+        self.checkbox_reduction.setChecked(False)
+        self.checkbox_surgery.setChecked(False)
+        self.checkbox_other.setChecked(False)
 
     @pyqtSlot()
     @handle_exceptions
@@ -260,11 +289,10 @@ class MainWindow(QMainWindow):
     @handle_exceptions
     def classify(self, class_nr):
         if self.settings.img_idx <= len(self.image_list):
-            print('classify', self.img_idx, len(self.image_list))
             print('you classified as:', class_nr)
             self.result_string += ',' + str(class_nr)
             if self.settings.copy_files:
-                src_path = self.image_list[self.img_idx]
+                src_path = self.image_list[self.settings.img_idx]
                 target_path = join(self.project_folder, self.settings.class_labels[class_nr], basename(src_path))
                 self.copy(src_path, target_path)
             self.classified = True
@@ -299,19 +327,28 @@ class MainWindow(QMainWindow):
                 headers += ','+obj+' y'
             if self.settings.class_labels:
                 headers += ',class'
-            headers += ',comments'
+            headers += ',postop'
 
             file.write(headers + '\n')
 
     @handle_exceptions
     def save_result(self):
-        if self.settings.img_idx <= len(self.image_list):
-            path = join(self.settings.project_folder, self.settings.project_name, '.csv')
-            if self.comment:
-                self.result_string += ','+self.comment
-            with open(path, 'a+') as file:
-                filename = basename(self.image_list[self.settings.img_idx])
-                file.write(filename+self.result_string+'\n')
+        if self.settings.img_idx > len(self.image_list):
+            return
+        path = join(self.settings.project_folder, self.settings.project_name+'.csv')
+
+        if self.checkbox_implants.isChecked():
+            self.result_string += ',implant'
+        if self.checkbox_reduction.isChecked():
+            self.result_string += ',reduction'
+        if self.checkbox_surgery.isChecked():
+            self.result_string += ',surgery'
+        if self.checkbox_other.isChecked():
+            self.result_string += ',other'
+
+        with open(path, 'a+') as file:
+            filename = basename(self.image_list[self.settings.img_idx])
+            file.write(filename+self.result_string+'\n')
 
     @handle_exceptions
     def is_ready(self):
@@ -380,5 +417,4 @@ class MainWindow(QMainWindow):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = MainWindow()
-    window.show()
     app.exec_()

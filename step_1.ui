@@ -647,7 +647,7 @@
      <item>
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
-        <widget class="QCheckBox" name="checkbox_thomo">
+        <widget class="QCheckBox" name="checkbox_tomo">
          <property name="minimumSize">
           <size>
            <width>0</width>

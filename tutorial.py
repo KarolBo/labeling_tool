@@ -29,7 +29,7 @@ class Tutorial:
             self.settings.eval_cc = self.project_creator_dialog.checkbox_cc.isChecked()
             self.settings.eval_mlo = self.project_creator_dialog.checkbox_mlo.isChecked()
             self.settings.eval_mammo = self.project_creator_dialog.checkbox_mammo.isChecked()
-            self.settings.eval_tomo = self.project_creator_dialog.checkbox_thomo.isChecked()
+            self.settings.eval_tomo = self.project_creator_dialog.checkbox_tomo.isChecked()
 
         def on_next_click():
             self.settings.project_name = self.project_creator_dialog.line_proj_name.text()
@@ -46,7 +46,7 @@ class Tutorial:
         self.project_creator_dialog.checkbox_cc.stateChanged.connect(on_filter_check)
         self.project_creator_dialog.checkbox_mlo.stateChanged.connect(on_filter_check)
         self.project_creator_dialog.checkbox_mammo.stateChanged.connect(on_filter_check)
-        self.project_creator_dialog.checkbox_thomo.stateChanged.connect(on_filter_check)
+        self.project_creator_dialog.checkbox_tomo.stateChanged.connect(on_filter_check)
 
         self.project_creator_dialog.button_browse_project.clicked.connect(self.set_project_folder)
         self.project_creator_dialog.button_browse_data.clicked.connect(self.set_data_folder)

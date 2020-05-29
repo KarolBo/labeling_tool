@@ -744,28 +744,6 @@ height:40px;
     <addaction name="action_copy"/>
     <addaction name="menuFile_Type"/>
    </widget>
-   <widget class="QMenu" name="menuFile">
-    <property name="font">
-     <font>
-      <pointsize>13</pointsize>
-     </font>
-    </property>
-    <property name="contextMenuPolicy">
-     <enum>Qt::NoContextMenu</enum>
-    </property>
-    <property name="autoFillBackground">
-     <bool>false</bool>
-    </property>
-    <property name="styleSheet">
-     <string notr="true"/>
-    </property>
-    <property name="title">
-     <string>Project</string>
-    </property>
-    <addaction name="menu_new"/>
-    <addaction name="menu_continue"/>
-   </widget>
-   <addaction name="menuFile"/>
    <addaction name="menuTools"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
