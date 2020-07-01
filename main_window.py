@@ -119,7 +119,6 @@ class MainWindow(QMainWindow):
             if ((self.settings.eval_mlo and mlo) or (self.settings.eval_cc and cc)) and \
                ((self.settings.eval_mammo and not is_tomo) or (self.settings.eval_tomo and is_tomo)):
                 new_list.append(filename)
-                print(filename)
 
         print('filtering accomplished')
         self.image_list = new_list

@@ -103,7 +103,7 @@ class Tutorial:
 
         def on_object_check(state):
             self.project_creator_dialog.radio_point.setEnabled(state)
-            self.project_creator_dialog.radio_square.setEnabled(state)
+            # self.project_creator_dialog.radio_square.setEnabled(state)
             self.project_creator_dialog.combo_obj_num.setEnabled(state)
             self.project_creator_dialog.label_2.setEnabled(state)
 
