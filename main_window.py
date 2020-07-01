@@ -101,6 +101,7 @@ class MainWindow(QMainWindow):
 
         msgBox = loadUi(join(self.folder, 'msg.ui'))
         msgBox.show()
+        app.processEvents()
 
         new_list = []
         for filename in self.image_list:

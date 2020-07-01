@@ -4,4 +4,4 @@
 
 errors.txt
 
-./*.xml
+*.xml

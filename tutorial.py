@@ -169,7 +169,7 @@ class Tutorial:
             | Qt.X11BypassWindowManagerHint)
         self.project_creator_dialog.show()
 
-        self.project_creator_dialog.tableWidget.setRowCount(len(self.settings.class_labels))
+        self.project_creator_dialog.tableWidget.setRowCount(len(self.settings.object_names))
         for i in range(len(self.settings.class_labels)):
             item = QTableWidgetItem(str(i))
             item.setFlags(item.flags() | ~Qt.ItemIsEditable)
