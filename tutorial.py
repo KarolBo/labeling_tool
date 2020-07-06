@@ -24,6 +24,7 @@ class Tutorial:
             self.project_creator_dialog.windowFlags() | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
                                                       | Qt.X11BypassWindowManagerHint)
         self.project_creator_dialog.show()
+        self.project_creator_dialog.activateWindow()
 
         def on_filter_check(_):
             self.settings.eval_cc = self.project_creator_dialog.checkbox_cc.isChecked()
@@ -60,6 +61,7 @@ class Tutorial:
         file_dialog = QFileDialog()
         file_dialog.setFileMode(QFileDialog.Directory)
         self.settings.project_folder = str(file_dialog.getExistingDirectory(self.project_creator_dialog))
+        self.project_creator_dialog.activateWindow()
         self.project_creator_dialog.setVisible(True)
         self.project_creator_dialog.line_proj_folder.setText(self.settings.project_folder)
 
@@ -71,6 +73,7 @@ class Tutorial:
         file_dialog = QFileDialog()
         file_dialog.setFileMode(QFileDialog.Directory)
         self.settings.data_folder = str(file_dialog.getExistingDirectory(self.project_creator_dialog))
+        self.project_creator_dialog.activateWindow()
         self.project_creator_dialog.setVisible(True)
         self.project_creator_dialog.line_data_folder.setText(self.settings.data_folder)
 
@@ -95,6 +98,7 @@ class Tutorial:
             self.project_creator_dialog.windowFlags() | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
             | Qt.X11BypassWindowManagerHint)
         self.project_creator_dialog.show()
+        self.project_creator_dialog.activateWindow()
 
         def on_class_check(state):
             self.project_creator_dialog.label_classes.setEnabled(state)
@@ -140,6 +144,7 @@ class Tutorial:
         self.project_creator_dialog.setWindowFlags(self.project_creator_dialog.windowFlags() | Qt.FramelessWindowHint
                                                    | Qt.WindowStaysOnTopHint | Qt.X11BypassWindowManagerHint)
         self.project_creator_dialog.show()
+        self.project_creator_dialog.activateWindow()
 
         self.project_creator_dialog.tableWidget.setRowCount(len(self.settings.class_labels))
         for i in range(len(self.settings.class_labels)):
@@ -168,6 +173,7 @@ class Tutorial:
             self.project_creator_dialog.windowFlags() | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
             | Qt.X11BypassWindowManagerHint)
         self.project_creator_dialog.show()
+        self.project_creator_dialog.activateWindow()
 
         self.project_creator_dialog.tableWidget.setRowCount(len(self.settings.object_names))
         for i in range(len(self.settings.class_labels)):
