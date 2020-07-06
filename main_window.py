@@ -95,15 +95,15 @@ class MainWindow(QMainWindow):
         self.image_list = glob(path, recursive=True)
 
     @handle_exceptions
-    def filter_dicoms(self):
+    def filter_out(self):
         if self.settings.eval_cc and self.settings.eval_mlo and self.settings.eval_mammo and self.settings.eval_tomo:
             return
 
-        msgBox = loadUi(join(self.folder, 'msg.ui'))
-        msgBox.show()
-
-        new_list = []
-        for filename in self.image_list:
+        to_skip = True
+        self.settings.img_idx -= 1
+        while (to_skip):
+            self.settings.img_idx += 1
+            filename = self.image_list[self.settings.img_idx]
             dcm = pydicom.read_file(filename)
             try:
                 projection = dcm.ViewPosition
@@ -117,11 +117,38 @@ class MainWindow(QMainWindow):
             mlo = 'mlo' in projection.lower()
             cc = 'cc' in projection.lower()
             if ((self.settings.eval_mlo and mlo) or (self.settings.eval_cc and cc)) and \
-               ((self.settings.eval_mammo and not is_tomo) or (self.settings.eval_tomo and is_tomo)):
-                new_list.append(filename)
+                    ((self.settings.eval_mammo and not is_tomo) or (self.settings.eval_tomo and is_tomo)):
+                to_skip = False
 
-        print('filtering accomplished')
-        self.image_list = new_list
+    # @handle_exceptions
+    # def filter_dicoms(self):
+    #     if self.settings.eval_cc and self.settings.eval_mlo and self.settings.eval_mammo and self.settings.eval_tomo:
+    #         return
+    #
+    #     msgBox = loadUi(join(self.folder, 'msg.ui'))
+    #     msgBox.show()
+    #     app.processEvents()
+    #
+    #     new_list = []
+    #     for filename in self.image_list:
+    #         dcm = pydicom.read_file(filename)
+    #         try:
+    #             projection = dcm.ViewPosition
+    #         except:
+    #             projection = "cc mlo"
+    #         try:
+    #             study_description = dcm.StudyDescription
+    #         except:
+    #             study_description = "mammo"
+    #         is_tomo = True if "recon" in study_description.lower() else False
+    #         mlo = 'mlo' in projection.lower()
+    #         cc = 'cc' in projection.lower()
+    #         if ((self.settings.eval_mlo and mlo) or (self.settings.eval_cc and cc)) and \
+    #            ((self.settings.eval_mammo and not is_tomo) or (self.settings.eval_tomo and is_tomo)):
+    #             new_list.append(filename)
+    #
+    #     print('filtering accomplished')
+    #     self.image_list = new_list
 
     @handle_exceptions
     def start_project(self, settings):
@@ -129,7 +156,7 @@ class MainWindow(QMainWindow):
         self.start_dialog = None
         self.settings = settings
         self.load_data()
-        self.filter_dicoms()
+        # self.filter_dicoms()
         self.show()
         self.screen.set_mode(self.settings.object_detection_mode)
         self.reset_state()
@@ -186,6 +213,7 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     @handle_exceptions
     def display(self):
+        self.filter_out()
         if self.settings.file_extension == 'dcm':
             dcm_file = pydicom.dcmread(self.image_list[self.settings.img_idx])
             self.screen.val_min, self.screen.val_max = self.get_windowing(dcm_file)
@@ -216,8 +244,8 @@ class MainWindow(QMainWindow):
     def display_next(self):
         self.settings.img_idx += 1
         self.reset_state()
-        self.display_hint()
         if self.settings.img_idx < len(self.image_list):
+            self.display_hint()
             self.display()
         else:
             self.finito()
