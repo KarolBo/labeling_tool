@@ -292,7 +292,7 @@ class MainWindow(QMainWindow):
     @handle_exceptions
     def skip_step(self):
         if self.settings.object_detection_mode and (self.object_idx < len(self.settings.object_names)):
-            self.screen.location = None
+            self.screen.location = "None, None"
             self.screen.x = None
             self.screen.y = None
             self.add_location()
