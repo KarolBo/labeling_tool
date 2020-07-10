@@ -109,6 +109,8 @@ class MplWidget(QWidget):
                 self.draw_point('red')
 
     def draw_point(self, color):
+        if self.location is None:
+            return
         point = self.canvas.axes.scatter(self.x, self.y, c=color)
         if self.red_point is not None:
             self.red_point.remove()

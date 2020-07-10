@@ -67,6 +67,7 @@ class MainWindow(QMainWindow):
 
         self.button_save_roi.clicked.connect(self.add_location)
         self.button_skip.clicked.connect(self.display_next)
+        self.button_skip_step.clicked.connect(self.skip_step)
         self.button_back.clicked.connect(self.get_back)
 
         self.button_jump.clicked.connect(self.jump_to_img)
@@ -95,7 +96,7 @@ class MainWindow(QMainWindow):
         self.image_list = glob(path, recursive=True)
 
     @handle_exceptions
-    def filter_out(self):
+    def filter_forward(self):
         if self.settings.eval_cc and self.settings.eval_mlo and self.settings.eval_mammo and self.settings.eval_tomo:
             return
 
@@ -120,35 +121,31 @@ class MainWindow(QMainWindow):
                     ((self.settings.eval_mammo and not is_tomo) or (self.settings.eval_tomo and is_tomo)):
                 to_skip = False
 
-    # @handle_exceptions
-    # def filter_dicoms(self):
-    #     if self.settings.eval_cc and self.settings.eval_mlo and self.settings.eval_mammo and self.settings.eval_tomo:
-    #         return
-    #
-    #     msgBox = loadUi(join(self.folder, 'msg.ui'))
-    #     msgBox.show()
-    #     app.processEvents()
-    #
-    #     new_list = []
-    #     for filename in self.image_list:
-    #         dcm = pydicom.read_file(filename)
-    #         try:
-    #             projection = dcm.ViewPosition
-    #         except:
-    #             projection = "cc mlo"
-    #         try:
-    #             study_description = dcm.StudyDescription
-    #         except:
-    #             study_description = "mammo"
-    #         is_tomo = True if "recon" in study_description.lower() else False
-    #         mlo = 'mlo' in projection.lower()
-    #         cc = 'cc' in projection.lower()
-    #         if ((self.settings.eval_mlo and mlo) or (self.settings.eval_cc and cc)) and \
-    #            ((self.settings.eval_mammo and not is_tomo) or (self.settings.eval_tomo and is_tomo)):
-    #             new_list.append(filename)
-    #
-    #     print('filtering accomplished')
-    #     self.image_list = new_list
+    @handle_exceptions
+    def filter_backward(self):
+        if self.settings.eval_cc and self.settings.eval_mlo and self.settings.eval_mammo and self.settings.eval_tomo:
+            return
+
+        to_skip = True
+        self.settings.img_idx += 1
+        while (to_skip):
+            self.settings.img_idx -= 1
+            filename = self.image_list[self.settings.img_idx]
+            dcm = pydicom.read_file(filename)
+            try:
+                projection = dcm.ViewPosition
+            except:
+                projection = "cc mlo"
+            try:
+                study_description = dcm.StudyDescription
+            except:
+                study_description = "mammo"
+            is_tomo = True if "recon" in study_description.lower() else False
+            mlo = 'mlo' in projection.lower()
+            cc = 'cc' in projection.lower()
+            if ((self.settings.eval_mlo and mlo) or (self.settings.eval_cc and cc)) and \
+                    ((self.settings.eval_mammo and not is_tomo) or (self.settings.eval_tomo and is_tomo)):
+                to_skip = False
 
     @handle_exceptions
     def start_project(self, settings):
@@ -213,7 +210,7 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     @handle_exceptions
     def display(self):
-        self.filter_out()
+        self.filter_forward()
         if self.settings.file_extension == 'dcm':
             dcm_file = pydicom.dcmread(self.image_list[self.settings.img_idx])
             self.screen.val_min, self.screen.val_max = self.get_windowing(dcm_file)
@@ -265,6 +262,7 @@ class MainWindow(QMainWindow):
             return
 
         self.settings.img_idx -= 1;
+        self.filter_backward()
         file_name = basename(self.image_list[self.settings.img_idx])
 
         # remove file
@@ -277,7 +275,7 @@ class MainWindow(QMainWindow):
                     print('Removed {}'.format(file_path))
 
         # remove location row
-        path = join(self.settings.project_folder, 'annotations.csv')
+        path = join(self.settings.project_folder, self.settings.project_name+'.csv')
         if isfile(path):
             with open(path, "r") as f:
                 lines = f.readlines()
@@ -289,6 +287,17 @@ class MainWindow(QMainWindow):
         # display previous image
         self.display()
         self.display_hint()
+
+    @pyqtSlot()
+    @handle_exceptions
+    def skip_step(self):
+        if self.settings.object_detection_mode and (self.object_idx < len(self.settings.object_names)):
+            self.screen.location = None
+            self.screen.x = None
+            self.screen.y = None
+            self.add_location()
+        elif len(self.settings.class_labels):
+            self.classify(None)
 
     @handle_exceptions
     def set_buttons_enabled(self, state):
