@@ -104,9 +104,13 @@ class Tutorial:
 
         def on_object_check(state):
             self.project_creator_dialog.radio_point.setEnabled(state)
-            # self.project_creator_dialog.radio_square.setEnabled(state)
+            self.project_creator_dialog.radio_square.setEnabled(state)
             self.project_creator_dialog.combo_obj_num.setEnabled(state)
             self.project_creator_dialog.label_2.setEnabled(state)
+            self.project_creator_dialog.check_unlimited.setEnabled(state)
+
+        def on_unlimited_check(state):
+            self.project_creator_dialog.combo_obj_num.setEnabled(not state)
 
         def on_next_click():
             self.settings.copy_files = self.project_creator_dialog.checkbox_copy.isChecked()
@@ -114,7 +118,8 @@ class Tutorial:
             next_step = self.finito
             if self.project_creator_dialog.checkbox_object.isChecked():
                 next_step = self.step_4
-                self.settings.object_names = (self.project_creator_dialog.combo_obj_num.currentIndex() + 1) * ['']
+                if not self.project_creator_dialog.check_unlimited.isChecked():
+                    self.settings.object_names = (self.project_creator_dialog.combo_obj_num.currentIndex() + 1) * ['']
 
                 if self.project_creator_dialog.radio_point.isChecked():
                     self.settings.object_detection_mode = 1
@@ -131,8 +136,8 @@ class Tutorial:
 
         self.project_creator_dialog.check_class.stateChanged.connect(on_class_check)
         self.project_creator_dialog.checkbox_object.stateChanged.connect(on_object_check)
-
         self.project_creator_dialog.button_cancel.clicked.connect(self.project_creator_dialog.close)
+        self.project_creator_dialog.check_unlimited.clicked.connect(on_unlimited_check)
         self.project_creator_dialog.button_next.clicked.connect(on_next_click)
 
     @handle_exceptions
