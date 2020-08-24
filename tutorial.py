@@ -26,16 +26,18 @@ class Tutorial:
         self.project_creator_dialog.show()
         self.project_creator_dialog.activateWindow()
 
-        def on_filter_check(_):
+        def on_next_click():
+            self.settings.project_name = self.project_creator_dialog.line_proj_name.text()
+            self.settings.author = self.project_creator_dialog.line_auth_name.text()
+            self.settings.institution = self.project_creator_dialog.line_institution.text()
+
             self.settings.eval_cc = self.project_creator_dialog.checkbox_cc.isChecked()
             self.settings.eval_mlo = self.project_creator_dialog.checkbox_mlo.isChecked()
             self.settings.eval_mammo = self.project_creator_dialog.checkbox_mammo.isChecked()
             self.settings.eval_tomo = self.project_creator_dialog.checkbox_tomo.isChecked()
 
-        def on_next_click():
-            self.settings.project_name = self.project_creator_dialog.line_proj_name.text()
-            self.settings.author = self.project_creator_dialog.line_auth_name.text()
-            self.settings.institution = self.project_creator_dialog.line_institution.text()
+            self.settings.decode = self.project_creator_dialog.checkbox_decode.isChecked()
+
             self.step_2()
 
         def set_extension(ext):
@@ -43,11 +45,6 @@ class Tutorial:
 
         self.project_creator_dialog.radio_dicom.toggled.connect(lambda: set_extension('dcm'))
         self.project_creator_dialog.radio_dicom.toggled.connect(lambda: set_extension('jpg'))
-
-        self.project_creator_dialog.checkbox_cc.stateChanged.connect(on_filter_check)
-        self.project_creator_dialog.checkbox_mlo.stateChanged.connect(on_filter_check)
-        self.project_creator_dialog.checkbox_mammo.stateChanged.connect(on_filter_check)
-        self.project_creator_dialog.checkbox_tomo.stateChanged.connect(on_filter_check)
 
         self.project_creator_dialog.button_browse_project.clicked.connect(self.set_project_folder)
         self.project_creator_dialog.button_browse_data.clicked.connect(self.set_data_folder)

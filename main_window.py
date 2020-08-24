@@ -13,6 +13,7 @@ import threading
 from scipy.misc import imread
 from tutorial import Tutorial
 from settings import Settings, handle_exceptions
+import subprocess
 
 
 class MainWindow(QMainWindow):
@@ -212,7 +213,9 @@ class MainWindow(QMainWindow):
     def display(self):
         self.filter_forward()
         if self.settings.file_extension == 'dcm':
-            dcm_file = pydicom.dcmread(self.image_list[self.settings.img_idx])
+            dcm_file_name = self.image_list[self.settings.img_idx]
+            subprocess.call(("dcmdjpeg", dcm_file_name, dcm_file_name))
+            dcm_file = pydicom.dcmread(dcm_file_name)
             self.screen.val_min, self.screen.val_max = self.get_windowing(dcm_file)
             self.screen.data_array = dcm_file.pixel_array
         else:

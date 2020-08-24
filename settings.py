@@ -31,6 +31,7 @@ class Settings:
         self.eval_cc = self.eval_mlo = self.eval_mammo = self.eval_tomo = True
         self.copy_files = False
         self.file_extension = 'dcm'
+        self.decode = False
 
     @handle_exceptions
     def save(self):
@@ -49,6 +50,7 @@ class Settings:
                          'eval_mammo': self.eval_mammo,
                          'eval_tomo': self.eval_tomo,
                          'file_extension': self.file_extension,
+                         'decode': self.decode,
                          'copy_files': self.copy_files}
         path = join(self.project_folder, 'settings.json')
 
@@ -76,3 +78,4 @@ class Settings:
             self.eval_tomo = settings_dict['eval_tomo']
             self.project_folder = settings_dict['project_folder']
             self.file_extension = settings_dict['file_extension']
+            self.decode = settings_dict['decode']
