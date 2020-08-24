@@ -2,7 +2,6 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.widgets import RectangleSelector
-from matplotlib.patches import Circle
 from main_window import handle_exceptions
 from enum import Enum
 
@@ -19,7 +18,7 @@ class MplWidget(QWidget):
     def __init__(self, parent=None):
 
         super().__init__(parent)
-        
+
         self.canvas = FigureCanvas(Figure())
         vertical_layout = QVBoxLayout()
         vertical_layout.addWidget(self.canvas)
@@ -60,7 +59,7 @@ class MplWidget(QWidget):
             self.location = None
         elif new_mode == Mode.roi:
             self.rs = RectangleSelector(self.canvas.axes, self.roi_select,
-                                        drawtype='box', useblit=False, button=[1],
+                                        drawtype='box', useblit=True, button=[1],
                                         minspanx=5, minspany=5, spancoords='pixels', interactive=True)
         self.mode = new_mode
 
@@ -78,8 +77,8 @@ class MplWidget(QWidget):
     def mouse_move(self, event):
         button_number = event.button if type(event.button) is int else event.button.value
         if (button_number == 2 and
-            event.xdata is not None and 
-            event.ydata is not None):
+                event.xdata is not None and
+                event.ydata is not None):
             sens = 2.5
             x = event.xdata
             y = event.ydata
@@ -101,8 +100,8 @@ class MplWidget(QWidget):
             self.x = event.xdata
             self.y = event.ydata
             button_number = event.button if type(event.button) is int else event.button.value
-            if (self.mode == Mode.point and 
-               button_number == 1):
+            if (self.mode == Mode.point and
+                    button_number == 1):
                 x = self.x / self.data_array.shape[1]
                 y = self.y / self.data_array.shape[0]
                 self.location = (x, y)

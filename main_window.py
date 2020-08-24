@@ -154,7 +154,6 @@ class MainWindow(QMainWindow):
         self.start_dialog = None
         self.settings = settings
         self.load_data()
-        # self.filter_dicoms()
         self.show()
         self.screen.set_mode(self.settings.object_detection_mode)
         self.reset_state()
