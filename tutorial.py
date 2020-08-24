@@ -22,7 +22,7 @@ class Tutorial:
         self.project_creator_dialog = loadUi(join(self.folder, 'step_1.ui'))
         self.project_creator_dialog.setWindowFlags(
             self.project_creator_dialog.windowFlags() | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
-                                                      | Qt.X11BypassWindowManagerHint)
+            | Qt.X11BypassWindowManagerHint)
         self.project_creator_dialog.show()
         self.project_creator_dialog.activateWindow()
 
@@ -117,8 +117,8 @@ class Tutorial:
 
             next_step = self.finito
             if self.project_creator_dialog.checkbox_object.isChecked():
-                next_step = self.step_4
                 if not self.project_creator_dialog.check_unlimited.isChecked():
+                    next_step = self.step_4
                     self.settings.object_names = (self.project_creator_dialog.combo_obj_num.currentIndex() + 1) * ['']
 
                 if self.project_creator_dialog.radio_point.isChecked():
@@ -198,6 +198,3 @@ class Tutorial:
     def finito(self):
         self.project_creator_dialog = None
         self.start_project()
-
-
-

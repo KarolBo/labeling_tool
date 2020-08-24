@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QTableWidgetItem, QHeaderView, QActionGroup, \
-                            QPushButton
+    QPushButton
 from PyQt5.QtGui import QPixmap, QIntValidator
 from PyQt5.uic import loadUi
 from glob import glob
@@ -29,6 +29,7 @@ class MainWindow(QMainWindow):
         self.image_list = []
         self.result_string = ''
         self.classified = False
+        self.objects_located = False
         self.locations = []
         self.object_idx = 0
 
@@ -72,6 +73,8 @@ class MainWindow(QMainWindow):
         self.button_back.clicked.connect(self.get_back)
 
         self.button_jump.clicked.connect(self.jump_to_img)
+
+        self.button_finish_location.clicked.connect(self.finish_location)
 
     @pyqtSlot()
     @handle_exceptions
@@ -164,6 +167,7 @@ class MainWindow(QMainWindow):
         if self.settings.class_labels:
             self.fill_class_table()
         self.button_save_roi.setEnabled(self.settings.object_detection_mode)
+        self.button_finish_location.setEnabled(self.settings.object_detection_mode)
         self.display_hint()
         self.display()
 
@@ -238,6 +242,8 @@ class MainWindow(QMainWindow):
         self.checkbox_surgery.setChecked(False)
         self.checkbox_other.setChecked(False)
 
+        self.objects_located = False
+
     @pyqtSlot()
     @handle_exceptions
     def display_next(self):
@@ -253,7 +259,7 @@ class MainWindow(QMainWindow):
     @handle_exceptions
     def jump_to_img(self):
         self.reset_state()
-        self.settings.img_idx = int(self.line_image_idx.text())-1
+        self.settings.img_idx = int(self.line_image_idx.text()) - 1
         self.display()
         self.display_hint()
 
@@ -277,7 +283,7 @@ class MainWindow(QMainWindow):
                     print('Removed {}'.format(file_path))
 
         # remove location row
-        path = join(self.settings.project_folder, self.settings.project_name+'.csv')
+        path = join(self.settings.project_folder, self.settings.project_name + '.csv')
         if isfile(path):
             with open(path, "r") as f:
                 lines = f.readlines()
@@ -341,34 +347,44 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     @handle_exceptions
     def add_location(self):
-        if self.object_idx >= len(self.settings.object_names):
+        if (self.settings.object_names and
+                self.object_idx >= len(self.settings.object_names)):
             return
-        self.locations[self.object_idx] = True
-        self.object_idx += 1
+
+        if self.settings.object_names:
+            self.locations[self.object_idx] = True
+            self.object_idx += 1
+
         if self.settings.object_detection_mode == 1:
             self.screen.draw_point('lawngreen')
         elif self.settings.object_detection_mode == 2:
             self.screen.draw_rect()
-        self.result_string += ','+str(self.screen.location).strip('()')
+        self.result_string += ',' + str(self.screen.location).strip('()')
         if self.is_ready():
             self.save_result()
             self.display_next()
-        elif self.settings.class_labels is not None and self.object_idx == len(self.settings.object_names):
+        elif self.objects_located or \
+             (self.settings.class_labels is not None and self.object_idx == len(self.settings.object_names)):
             self.set_buttons_enabled(True)
+
+    @pyqtSlot()
+    @handle_exceptions
+    def finish_location(self):
+        self.objects_located = True
 
     @handle_exceptions
     def create_result_file(self):
-        path = join(self.settings.project_folder, self.settings.project_name+'.csv')
+        path = join(self.settings.project_folder, self.settings.project_name + '.csv')
         if isfile(path):
             return
         with open(path, 'w') as file:
             headers = 'file'
             for obj in self.settings.object_names:
-                headers += ','+obj+' x'
-                headers += ','+obj+' y'
+                headers += ',' + obj + ' x'
+                headers += ',' + obj + ' y'
                 if self.settings.object_detection_mode == 2:
-                    headers += ','+obj+' w'
-                    headers += ','+obj+' h'
+                    headers += ',' + obj + ' w'
+                    headers += ',' + obj + ' h'
             if self.settings.class_labels:
                 headers += ',class'
             headers += ',postop'
@@ -379,7 +395,7 @@ class MainWindow(QMainWindow):
     def save_result(self):
         if self.settings.img_idx > len(self.image_list):
             return
-        path = join(self.settings.project_folder, self.settings.project_name+'.csv')
+        path = join(self.settings.project_folder, self.settings.project_name + '.csv')
 
         if self.checkbox_implants.isChecked():
             self.result_string += ',implant'
@@ -392,7 +408,7 @@ class MainWindow(QMainWindow):
 
         with open(path, 'a+') as file:
             filename = basename(self.image_list[self.settings.img_idx])
-            file.write(filename+self.result_string+'\n')
+            file.write(filename + self.result_string + '\n')
 
     @handle_exceptions
     def is_ready(self):
@@ -400,8 +416,9 @@ class MainWindow(QMainWindow):
 
         class_checked = (len(self.settings.class_labels) > 0)
         object_checked = (self.settings.object_detection_mode > 0)
-        located = (self.object_idx == len(self.settings.object_names))
-        status = (self.classified or not class_checked) and (located or not object_checked)
+        if self.settings.object_names:
+            self.objects_located = (self.object_idx == len(self.settings.object_names))
+        status = (self.classified or not class_checked) and (self.objects_located or not object_checked)
 
         return status
 
@@ -436,8 +453,12 @@ class MainWindow(QMainWindow):
 
     @handle_exceptions
     def display_hint(self):
-        if self.settings.object_detection_mode and (self.object_idx < len(self.settings.object_names)):
+        if self.settings.object_detection_mode > 0 and (self.object_idx < len(self.settings.object_names)):
             self.hint_label.setText('Mark the {}'.format(self.settings.object_names[self.object_idx]))
+        elif self.settings.object_detection_mode > 0 and \
+                len(self.settings.object_names) == 0 and not \
+                self.objects_located:
+            self.hint_label.setText('Mark next object')
         elif len(self.settings.class_labels):
             self.hint_label.setText('Choose the class')
 
@@ -454,6 +475,7 @@ class MainWindow(QMainWindow):
         if self.settings.data_folder:
             self.settings.save()
         self.close()
+
 
 ##########################################################################################
 
