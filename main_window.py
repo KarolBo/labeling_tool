@@ -345,7 +345,10 @@ class MainWindow(QMainWindow):
             return
         self.locations[self.object_idx] = True
         self.object_idx += 1
-        self.screen.draw_point('lawngreen')
+        if self.settings.object_detection_mode == 1:
+            self.screen.draw_point('lawngreen')
+        elif self.settings.object_detection_mode == 2:
+            self.screen.draw_rect()
         self.result_string += ','+str(self.screen.location).strip('()')
         if self.is_ready():
             self.save_result()
@@ -363,6 +366,9 @@ class MainWindow(QMainWindow):
             for obj in self.settings.object_names:
                 headers += ','+obj+' x'
                 headers += ','+obj+' y'
+                if self.settings.object_detection_mode == 2:
+                    headers += ','+obj+' w'
+                    headers += ','+obj+' h'
             if self.settings.class_labels:
                 headers += ',class'
             headers += ',postop'

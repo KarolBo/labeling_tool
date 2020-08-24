@@ -67,11 +67,15 @@ class MplWidget(QWidget):
     def roi_select(self, click, release):
         x1, y1 = click.xdata, click.ydata
         x2, y2 = release.xdata, release.ydata
-        w = abs(x1 - x2) / self.data_array.shape[1]
-        h = abs(y1 - y2) / self.data_array.shape[0]
-        x = min(x1, x2) / self.data_array.shape[1] + w / 2
-        y = min(y1, y2) / self.data_array.shape[0] + h / 2
-        self.location = (x, y, w, h)
+        # w = abs(x1 - x2) / self.data_array.shape[1]
+        # h = abs(y1 - y2) / self.data_array.shape[0]
+        # x = min(x1, x2) / self.data_array.shape[1] + w / 2
+        # y = min(y1, y2) / self.data_array.shape[0] + h / 2
+        xmin = min(x1, x2) / self.data_array.shape[1]
+        xmax = max(x1, x2) / self.data_array.shape[1]
+        ymin = min(y1, y2) / self.data_array.shape[0]
+        ymax = max(y1, y2) / self.data_array.shape[0]
+        self.location = (xmin, xmax, ymin, ymax)
 
     @handle_exceptions
     def mouse_move(self, event):
@@ -116,4 +120,15 @@ class MplWidget(QWidget):
             self.red_point = None
         if color == 'red':
             self.red_point = point
+        self.canvas.draw()
+
+    def draw_rect(self):
+        if len(self.location) < 4:
+            return
+        self.canvas.axes.axvspan(xmin=self.location[0] * self.data_array.shape[1],
+                                 xmax=self.location[1] * self.data_array.shape[1],
+                                 ymin=1-self.location[2],
+                                 ymax=1-self.location[3],
+                                 facecolor='g', alpha=0.5)
+        self.location = None
         self.canvas.draw()
