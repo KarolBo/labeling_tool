@@ -254,7 +254,6 @@ class MainWindow(QMainWindow):
         # Localization + location classification
         if self.settings.classification_mode == 2 and self.settings.object_detection_mode > 0:
             if self.all_objects_localized:
-                print(self.classified)
                 if self.classified:
                     self.save_result_and_proceed()
                     self.display_object_localization_hint()
@@ -266,11 +265,12 @@ class MainWindow(QMainWindow):
             else:
                 if self.one_object_localized:
                     if self.classified:
+                        self.classified = False
                         self.display_object_localization_hint()
                     else:
                         self.set_buttons_enabled(True)
                         self.expected_action = 'classification'
-                        self.hint_label.setText('Choose the object class')
+                        self.hint_label.setText('bChoose the object class')
                 else:
                     self.display_object_localization_hint()
 
