@@ -178,7 +178,7 @@ class Tutorial:
         self.project_creator_dialog.activateWindow()
 
         self.project_creator_dialog.tableWidget.setRowCount(len(self.settings.object_names))
-        for i in range(len(self.settings.class_labels)):
+        for i in range(len(self.settings.object_names)):
             item = QTableWidgetItem(str(i))
             item.setFlags(item.flags() | ~Qt.ItemIsEditable)
             self.project_creator_dialog.tableWidget.setItem(i, 0, item)

@@ -364,7 +364,7 @@ class MainWindow(QMainWindow):
             self.save_result()
             self.display_next()
         elif self.objects_located or \
-             (self.settings.class_labels is not None and self.object_idx == len(self.settings.object_names)):
+                (self.settings.class_labels is not None and self.object_idx == len(self.settings.object_names)):
             self.set_buttons_enabled(True)
 
     @pyqtSlot()
@@ -379,15 +379,19 @@ class MainWindow(QMainWindow):
             return
         with open(path, 'w') as file:
             headers = 'file'
-            for obj in self.settings.object_names:
-                headers += ',' + obj + ' x'
-                headers += ',' + obj + ' y'
-                if self.settings.object_detection_mode == 2:
-                    headers += ',' + obj + ' w'
-                    headers += ',' + obj + ' h'
+            if self.settings.object_detection_mode == 1:
+                for obj in self.settings.object_names:
+                    headers += ',' + obj + ' x'
+                    headers += ',' + obj + ' y'
+            elif self.settings.object_detection_mode == 2:
+                for obj in self.settings.object_names:
+                    headers += ',' + obj + ' x1'
+                    headers += ',' + obj + ' x2'
+                    headers += ',' + obj + ' y2'
+                    headers += ',' + obj + ' y2'
             if self.settings.class_labels:
                 headers += ',class'
-            headers += ',postop'
+            headers += ',comments'
 
             file.write(headers + '\n')
 
@@ -396,7 +400,6 @@ class MainWindow(QMainWindow):
         if self.settings.img_idx > len(self.image_list):
             return
         path = join(self.settings.project_folder, self.settings.project_name + '.csv')
-
         if self.checkbox_implants.isChecked():
             self.result_string += ',implant'
         if self.checkbox_reduction.isChecked():

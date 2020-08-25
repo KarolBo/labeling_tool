@@ -130,5 +130,4 @@ class MplWidget(QWidget):
                                  ymin=1-self.location[2],
                                  ymax=1-self.location[3],
                                  facecolor='g', alpha=0.5)
-        self.location = None
         self.canvas.draw()
