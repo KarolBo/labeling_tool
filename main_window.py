@@ -347,8 +347,7 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     @handle_exceptions
     def add_location(self):
-        if (self.settings.object_names and
-                self.object_idx >= len(self.settings.object_names)):
+        if self.settings.object_names and self.object_idx >= len(self.settings.object_names):
             return
 
         if self.settings.object_names:
@@ -359,18 +358,26 @@ class MainWindow(QMainWindow):
             self.screen.draw_point('lawngreen')
         elif self.settings.object_detection_mode == 2:
             self.screen.draw_rect()
+
         self.result_string += ',' + str(self.screen.location).strip('()')
+
+        self.check_status_and_proceed()
+
+    @handle_exceptions
+    def check_status_and_proceed(self):
         if self.is_ready():
             self.save_result()
             self.display_next()
         elif self.objects_located or \
-                (self.settings.class_labels is not None and self.object_idx == len(self.settings.object_names)):
+                (self.settings.class_labels is not None and
+                 self.object_idx == len(self.settings.object_names)):
             self.set_buttons_enabled(True)
 
     @pyqtSlot()
     @handle_exceptions
     def finish_location(self):
         self.objects_located = True
+        self.check_status_and_proceed()
 
     @handle_exceptions
     def create_result_file(self):
@@ -389,9 +396,11 @@ class MainWindow(QMainWindow):
                     headers += ',' + obj + ' x2'
                     headers += ',' + obj + ' y2'
                     headers += ',' + obj + ' y2'
-            if self.settings.class_labels:
+            if self.settings.class_labels and \
+                    (self.settings.object_detection_mode == 0 or
+                     self.settings.object_names):
                 headers += ',class'
-            headers += ',comments'
+                headers += ',comments'
 
             file.write(headers + '\n')
 

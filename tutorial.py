@@ -160,7 +160,7 @@ class Tutorial:
             for j in range(len(self.settings.class_labels)):
                 label = self.project_creator_dialog.tableWidget.item(j, 1).text()
                 self.settings.class_labels[j] = label
-            if self.settings.object_detection_mode:
+            if self.settings.object_detection_mode and self.settings.object_names:
                 self.step_4()
             else:
                 self.finito()
