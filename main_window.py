@@ -260,17 +260,16 @@ class MainWindow(QMainWindow):
                 else:
                     self.set_buttons_enabled(True)
                     self.expected_action = 'classification'
-                    self.hint_label.setText('aChoose the object class')
+                    self.hint_label.setText('Choose the object class')
 
             else:
                 if self.one_object_localized:
                     if self.classified:
-                        self.classified = False
                         self.display_object_localization_hint()
                     else:
                         self.set_buttons_enabled(True)
                         self.expected_action = 'classification'
-                        self.hint_label.setText('bChoose the object class')
+                        self.hint_label.setText('Choose the object class')
                 else:
                     self.display_object_localization_hint()
 
@@ -435,6 +434,7 @@ class MainWindow(QMainWindow):
 
         self.result_string += ',' + str(self.screen.location).strip('()')
         self.one_object_localized = True
+        self.classified = False
 
         self.next_step()
 
