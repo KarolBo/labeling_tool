@@ -83,18 +83,19 @@ class MplWidget(QWidget):
         if (button_number == 2 and
                 event.xdata is not None and
                 event.ydata is not None):
-            sens = 2.5
+            sensitivity = 2.5
             x = event.xdata
             y = event.ydata
             dx = x - self.x
             dy = y - self.y
-            new_min = self.val_min + sens * dx
-            new_max = self.val_max + sens * dy
+            new_min = self.val_min + sensitivity * dx
+            new_max = self.val_max + sensitivity * dy
             if new_min < new_max:
                 if new_min >= self.data_array.min():
                     self.val_min = new_min
                 if new_max <= self.data_array.max():
                     self.val_max = new_max
+                self.display()
             self.x = x
             self.y = y
 
