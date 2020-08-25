@@ -2,7 +2,6 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.widgets import RectangleSelector
-from matplotlib.patches import Circle
 from main_window import handle_exceptions
 from enum import Enum
 
@@ -19,7 +18,7 @@ class MplWidget(QWidget):
     def __init__(self, parent=None):
 
         super().__init__(parent)
-        
+
         self.canvas = FigureCanvas(Figure())
         vertical_layout = QVBoxLayout()
         vertical_layout.addWidget(self.canvas)
@@ -60,7 +59,7 @@ class MplWidget(QWidget):
             self.location = None
         elif new_mode == Mode.roi:
             self.rs = RectangleSelector(self.canvas.axes, self.roi_select,
-                                        drawtype='box', useblit=False, button=[1],
+                                        drawtype='box', useblit=True, button=[1],
                                         minspanx=5, minspany=5, spancoords='pixels', interactive=True)
         self.mode = new_mode
 
@@ -68,30 +67,35 @@ class MplWidget(QWidget):
     def roi_select(self, click, release):
         x1, y1 = click.xdata, click.ydata
         x2, y2 = release.xdata, release.ydata
-        w = abs(x1 - x2) / self.data_array.shape[1]
-        h = abs(y1 - y2) / self.data_array.shape[0]
-        x = min(x1, x2) / self.data_array.shape[1] + w / 2
-        y = min(y1, y2) / self.data_array.shape[0] + h / 2
-        self.location = (x, y, w, h)
+        # w = abs(x1 - x2) / self.data_array.shape[1]
+        # h = abs(y1 - y2) / self.data_array.shape[0]
+        # x = min(x1, x2) / self.data_array.shape[1] + w / 2
+        # y = min(y1, y2) / self.data_array.shape[0] + h / 2
+        xmin = min(x1, x2) / self.data_array.shape[1]
+        xmax = max(x1, x2) / self.data_array.shape[1]
+        ymin = min(y1, y2) / self.data_array.shape[0]
+        ymax = max(y1, y2) / self.data_array.shape[0]
+        self.location = (xmin, xmax, ymin, ymax)
 
     @handle_exceptions
     def mouse_move(self, event):
         button_number = event.button if type(event.button) is int else event.button.value
         if (button_number == 2 and
-            event.xdata is not None and 
-            event.ydata is not None):
-            sens = 2.5
+                event.xdata is not None and
+                event.ydata is not None):
+            sensitivity = 2.5
             x = event.xdata
             y = event.ydata
             dx = x - self.x
             dy = y - self.y
-            new_min = self.val_min + sens * dx
-            new_max = self.val_max + sens * dy
+            new_min = self.val_min + sensitivity * dx
+            new_max = self.val_max + sensitivity * dy
             if new_min < new_max:
                 if new_min >= self.data_array.min():
                     self.val_min = new_min
                 if new_max <= self.data_array.max():
                     self.val_max = new_max
+                self.display()
             self.x = x
             self.y = y
 
@@ -101,8 +105,8 @@ class MplWidget(QWidget):
             self.x = event.xdata
             self.y = event.ydata
             button_number = event.button if type(event.button) is int else event.button.value
-            if (self.mode == Mode.point and 
-               button_number == 1):
+            if (self.mode == Mode.point and
+                    button_number == 1):
                 x = self.x / self.data_array.shape[1]
                 y = self.y / self.data_array.shape[0]
                 self.location = (x, y)
@@ -117,4 +121,14 @@ class MplWidget(QWidget):
             self.red_point = None
         if color == 'red':
             self.red_point = point
+        self.canvas.draw()
+
+    def draw_rect(self):
+        if len(self.location) < 4:
+            return
+        self.canvas.axes.axvspan(xmin=self.location[0] * self.data_array.shape[1],
+                                 xmax=self.location[1] * self.data_array.shape[1],
+                                 ymin=1-self.location[2],
+                                 ymax=1-self.location[3],
+                                 facecolor='g', alpha=0.5)
         self.canvas.draw()

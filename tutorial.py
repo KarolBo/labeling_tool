@@ -22,20 +22,22 @@ class Tutorial:
         self.project_creator_dialog = loadUi(join(self.folder, 'step_1.ui'))
         self.project_creator_dialog.setWindowFlags(
             self.project_creator_dialog.windowFlags() | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
-                                                      | Qt.X11BypassWindowManagerHint)
+            | Qt.X11BypassWindowManagerHint)
         self.project_creator_dialog.show()
         self.project_creator_dialog.activateWindow()
-
-        def on_filter_check(_):
-            self.settings.eval_cc = self.project_creator_dialog.checkbox_cc.isChecked()
-            self.settings.eval_mlo = self.project_creator_dialog.checkbox_mlo.isChecked()
-            self.settings.eval_mammo = self.project_creator_dialog.checkbox_mammo.isChecked()
-            self.settings.eval_tomo = self.project_creator_dialog.checkbox_tomo.isChecked()
 
         def on_next_click():
             self.settings.project_name = self.project_creator_dialog.line_proj_name.text()
             self.settings.author = self.project_creator_dialog.line_auth_name.text()
             self.settings.institution = self.project_creator_dialog.line_institution.text()
+
+            self.settings.eval_cc = self.project_creator_dialog.checkbox_cc.isChecked()
+            self.settings.eval_mlo = self.project_creator_dialog.checkbox_mlo.isChecked()
+            self.settings.eval_mammo = self.project_creator_dialog.checkbox_mammo.isChecked()
+            self.settings.eval_tomo = self.project_creator_dialog.checkbox_tomo.isChecked()
+
+            self.settings.decode = self.project_creator_dialog.checkbox_decode.isChecked()
+
             self.step_2()
 
         def set_extension(ext):
@@ -43,11 +45,6 @@ class Tutorial:
 
         self.project_creator_dialog.radio_dicom.toggled.connect(lambda: set_extension('dcm'))
         self.project_creator_dialog.radio_dicom.toggled.connect(lambda: set_extension('jpg'))
-
-        self.project_creator_dialog.checkbox_cc.stateChanged.connect(on_filter_check)
-        self.project_creator_dialog.checkbox_mlo.stateChanged.connect(on_filter_check)
-        self.project_creator_dialog.checkbox_mammo.stateChanged.connect(on_filter_check)
-        self.project_creator_dialog.checkbox_tomo.stateChanged.connect(on_filter_check)
 
         self.project_creator_dialog.button_browse_project.clicked.connect(self.set_project_folder)
         self.project_creator_dialog.button_browse_data.clicked.connect(self.set_data_folder)
@@ -104,20 +101,33 @@ class Tutorial:
             self.project_creator_dialog.label_classes.setEnabled(state)
             self.project_creator_dialog.comboBox.setEnabled(state)
             self.project_creator_dialog.checkbox_copy.setEnabled(state)
+            if self.project_creator_dialog.checkbox_object.isChecked():
+                self.project_creator_dialog.radio_image.setEnabled(state)
+                self.project_creator_dialog.radio_location.setEnabled(state)
 
         def on_object_check(state):
             self.project_creator_dialog.radio_point.setEnabled(state)
-            # self.project_creator_dialog.radio_square.setEnabled(state)
+            self.project_creator_dialog.radio_square.setEnabled(state)
             self.project_creator_dialog.combo_obj_num.setEnabled(state)
             self.project_creator_dialog.label_2.setEnabled(state)
+            self.project_creator_dialog.check_unlimited.setEnabled(state)
+            if self.project_creator_dialog.check_class.isChecked():
+                self.project_creator_dialog.radio_image.setEnabled(state)
+                self.project_creator_dialog.radio_location.setEnabled(state)
+                if not state:
+                    self.project_creator_dialog.radio_image.setChecked(True)
+
+        def on_unlimited_check(state):
+            self.project_creator_dialog.combo_obj_num.setEnabled(not state)
 
         def on_next_click():
             self.settings.copy_files = self.project_creator_dialog.checkbox_copy.isChecked()
 
             next_step = self.finito
             if self.project_creator_dialog.checkbox_object.isChecked():
-                next_step = self.step_4
-                self.settings.object_names = (self.project_creator_dialog.combo_obj_num.currentIndex() + 1) * ['']
+                if not self.project_creator_dialog.check_unlimited.isChecked():
+                    next_step = self.step_4
+                    self.settings.object_names = (self.project_creator_dialog.combo_obj_num.currentIndex() + 1) * ['']
 
                 if self.project_creator_dialog.radio_point.isChecked():
                     self.settings.object_detection_mode = 1
@@ -129,13 +139,19 @@ class Tutorial:
             if self.project_creator_dialog.check_class.isChecked():
                 self.settings.class_labels = (self.project_creator_dialog.comboBox.currentIndex() + 2) * ['']
                 next_step = self.step_3
+                if self.project_creator_dialog.radio_image.isChecked():
+                    self.settings.classification_mode = 1
+                else:
+                    self.settings.classification_mode = 2
+            else:
+                self.settings.classification_mode = 0
 
             next_step()
 
         self.project_creator_dialog.check_class.stateChanged.connect(on_class_check)
         self.project_creator_dialog.checkbox_object.stateChanged.connect(on_object_check)
-
         self.project_creator_dialog.button_cancel.clicked.connect(self.project_creator_dialog.close)
+        self.project_creator_dialog.check_unlimited.clicked.connect(on_unlimited_check)
         self.project_creator_dialog.button_next.clicked.connect(on_next_click)
 
     @handle_exceptions
@@ -158,7 +174,7 @@ class Tutorial:
             for j in range(len(self.settings.class_labels)):
                 label = self.project_creator_dialog.tableWidget.item(j, 1).text()
                 self.settings.class_labels[j] = label
-            if self.settings.object_detection_mode:
+            if self.settings.object_detection_mode and self.settings.object_names:
                 self.step_4()
             else:
                 self.finito()
@@ -176,7 +192,7 @@ class Tutorial:
         self.project_creator_dialog.activateWindow()
 
         self.project_creator_dialog.tableWidget.setRowCount(len(self.settings.object_names))
-        for i in range(len(self.settings.class_labels)):
+        for i in range(len(self.settings.object_names)):
             item = QTableWidgetItem(str(i))
             item.setFlags(item.flags() | ~Qt.ItemIsEditable)
             self.project_creator_dialog.tableWidget.setItem(i, 0, item)
@@ -196,6 +212,3 @@ class Tutorial:
     def finito(self):
         self.project_creator_dialog = None
         self.start_project()
-
-
-
