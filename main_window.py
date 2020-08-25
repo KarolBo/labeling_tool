@@ -162,12 +162,13 @@ class MainWindow(QMainWindow):
         self.reset_state()
         if self.settings.copy_files:
             self.create_folders()
-        self.create_result_file()
+        # self.create_result_file()
         self.create_buttons()
         if self.settings.class_labels:
             self.fill_class_table()
         self.button_save_roi.setEnabled(self.settings.object_detection_mode)
         self.button_finish_location.setEnabled(self.settings.object_detection_mode)
+        self.set_buttons_enabled(False)
 
         self.settings.img_idx -= 1
         self.next_step()
@@ -222,6 +223,7 @@ class MainWindow(QMainWindow):
         if self.settings.classification_mode > 0 and self.settings.object_detection_mode == 0:
             if self.classified:
                 self.save_result_and_proceed()
+            self.set_buttons_enabled(True)
             self.hint_label.setText('Choose the image class')
 
         # Localization
@@ -242,7 +244,10 @@ class MainWindow(QMainWindow):
                     self.save_result_and_proceed()
                     self.display_object_localization_hint()
                 else:
+                    self.set_buttons_enabled(True)
                     self.hint_label.setText('Choose the image class')
+            else:
+                self.display_object_localization_hint()
 
         # Localization + location classification
         if self.settings.classification_mode == 2 and self.settings.object_detection_mode > 0:
@@ -251,14 +256,16 @@ class MainWindow(QMainWindow):
                     self.save_result_and_proceed()
                     self.display_object_localization_hint()
                 else:
+                    self.set_buttons_enabled(True)
                     self.hint_label.setText('Choose the object class')
 
             else:
                 if self.one_object_localized:
                     if self.classified:
-                        self.save_result_and_proceed()
+                        self.classified = False
                         self.display_object_localization_hint()
                     else:
+                        self.set_buttons_enabled(True)
                         self.hint_label.setText('Choose the object class')
                 else:
                     self.display_object_localization_hint()
