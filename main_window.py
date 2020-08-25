@@ -39,6 +39,8 @@ class MainWindow(QMainWindow):
         self.start_dialog = None
         self.show_start_dialog()
 
+        self.expected_action = None
+
     @handle_exceptions
     def show_start_dialog(self):
         self.start_dialog = loadUi(join(self.folder, 'start_dialog.ui'))
@@ -224,18 +226,17 @@ class MainWindow(QMainWindow):
             if self.classified:
                 self.save_result_and_proceed()
             self.set_buttons_enabled(True)
+            self.expected_action = 'classification'
             self.hint_label.setText('Choose the image class')
 
         # Localization
         if self.settings.classification_mode == 0 and self.settings.object_detection_mode > 0:
             if self.all_objects_localized:
                 self.save_result_and_proceed()
+                self.expected_action = 'localization'
                 self.hint_label.setText('Mark the {}'.format(self.settings.object_names[self.object_idx]))
             else:
-                if self.settings.object_names:
-                    self.hint_label.setText('Mark the {}'.format(self.settings.object_names[self.object_idx]))
-                else:
-                    self.hint_label.setText('Mark next object')
+                self.display_object_localization_hint()
 
         # Localization + image classification
         if self.settings.classification_mode == 1 and self.settings.object_detection_mode > 0:
@@ -245,6 +246,7 @@ class MainWindow(QMainWindow):
                     self.display_object_localization_hint()
                 else:
                     self.set_buttons_enabled(True)
+                    self.expected_action = 'classification'
                     self.hint_label.setText('Choose the image class')
             else:
                 self.display_object_localization_hint()
@@ -258,6 +260,7 @@ class MainWindow(QMainWindow):
                     self.display_object_localization_hint()
                 else:
                     self.set_buttons_enabled(True)
+                    self.expected_action = 'classification'
                     self.hint_label.setText('aChoose the object class')
 
             else:
@@ -266,6 +269,7 @@ class MainWindow(QMainWindow):
                         self.display_object_localization_hint()
                     else:
                         self.set_buttons_enabled(True)
+                        self.expected_action = 'classification'
                         self.hint_label.setText('Choose the object class')
                 else:
                     self.display_object_localization_hint()
@@ -278,6 +282,7 @@ class MainWindow(QMainWindow):
 
     @handle_exceptions
     def display_object_localization_hint(self):
+        self.expected_action = 'localization'
         if self.settings.object_names:
             self.hint_label.setText('Mark the {}'.format(self.settings.object_names[self.object_idx]))
         else:
@@ -399,6 +404,9 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     @handle_exceptions
     def classify(self, class_nr):
+        if self.expected_action is not 'classification':
+            return
+
         if self.settings.img_idx <= len(self.image_list):
             print('you classified as:', class_nr)
             self.result_string += ',' + str(class_nr)
@@ -412,7 +420,7 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     @handle_exceptions
     def add_location(self):
-        if self.settings.object_names and self.object_idx >= len(self.settings.object_names):
+        if self.expected_action is not 'localization':
             return
 
         if self.settings.object_names:
