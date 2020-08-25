@@ -101,6 +101,9 @@ class Tutorial:
             self.project_creator_dialog.label_classes.setEnabled(state)
             self.project_creator_dialog.comboBox.setEnabled(state)
             self.project_creator_dialog.checkbox_copy.setEnabled(state)
+            if self.project_creator_dialog.checkbox_object.isChecked():
+                self.project_creator_dialog.radio_image.setEnabled(state)
+                self.project_creator_dialog.radio_location.setEnabled(state)
 
         def on_object_check(state):
             self.project_creator_dialog.radio_point.setEnabled(state)
@@ -108,6 +111,11 @@ class Tutorial:
             self.project_creator_dialog.combo_obj_num.setEnabled(state)
             self.project_creator_dialog.label_2.setEnabled(state)
             self.project_creator_dialog.check_unlimited.setEnabled(state)
+            if self.project_creator_dialog.check_class.isChecked():
+                self.project_creator_dialog.radio_image.setEnabled(state)
+                self.project_creator_dialog.radio_location.setEnabled(state)
+                if not state:
+                    self.project_creator_dialog.radio_image.setChecked(True)
 
         def on_unlimited_check(state):
             self.project_creator_dialog.combo_obj_num.setEnabled(not state)
@@ -160,7 +168,7 @@ class Tutorial:
             for j in range(len(self.settings.class_labels)):
                 label = self.project_creator_dialog.tableWidget.item(j, 1).text()
                 self.settings.class_labels[j] = label
-            if self.settings.object_detection_mode and self.settings.object_names:
+            if self.settings.object_detection_mode and self.settings.object_names1:
                 self.step_4()
             else:
                 self.finito()
