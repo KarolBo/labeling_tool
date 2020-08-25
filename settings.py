@@ -12,6 +12,7 @@ def handle_exceptions(func):
             with open('errors.log', 'a+') as f:
                 f.write('Exception in {}: {}\n'.format(func.__name__, e))
             return None
+
     return func_wrapper
 
 
@@ -25,7 +26,8 @@ class Settings:
         self.project_folder = ''
         self.data_folder = ''
         self.class_labels = []
-        self.object_detection_mode = 0
+        self.classification_mode = 0  # 0 - none, 1 - class per image, 2 - class per location
+        self.object_detection_mode = 0  # 0 - none, 1 - point, 2 - square
         self.object_names = []
         self.img_idx = 0
         self.eval_cc = self.eval_mlo = self.eval_mammo = self.eval_tomo = True
@@ -41,6 +43,7 @@ class Settings:
                          'data_folder': self.data_folder,
                          'project_folder': self.project_folder,
                          'class_labels': self.class_labels,
+                         'classification_mode': self.classification_mode,
                          'object_detection': self.object_detection_mode,
                          'object_names': self.object_names,
                          'last_image': self.img_idx,
@@ -70,6 +73,7 @@ class Settings:
             self.data_folder = settings_dict['data_folder']
             self.class_labels = settings_dict['class_labels']
             self.object_names = settings_dict['object_names']
+            self.classification_mode = settings_dict['classification_mode']
             self.object_detection_mode = settings_dict['object_detection']
             self.copy_files = settings_dict['copy_images']
             self.eval_cc = settings_dict['eval_cc']

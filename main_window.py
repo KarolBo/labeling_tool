@@ -29,8 +29,8 @@ class MainWindow(QMainWindow):
         self.image_list = []
         self.result_string = ''
         self.classified = False
-        self.objects_located = False
-        self.locations = []
+        self.one_object_localized = False
+        self.all_objects_localized = False
         self.object_idx = 0
 
         self.init_gui()
@@ -74,7 +74,7 @@ class MainWindow(QMainWindow):
 
         self.button_jump.clicked.connect(self.jump_to_img)
 
-        self.button_finish_location.clicked.connect(self.finish_location)
+        self.button_finish_location.clicked.connect(self.finish_localization)
 
     @pyqtSlot()
     @handle_exceptions
@@ -168,8 +168,9 @@ class MainWindow(QMainWindow):
             self.fill_class_table()
         self.button_save_roi.setEnabled(self.settings.object_detection_mode)
         self.button_finish_location.setEnabled(self.settings.object_detection_mode)
-        self.display_hint()
-        self.display()
+
+        self.settings.img_idx -= 1
+        self.next_step()
 
     @pyqtSlot()
     @handle_exceptions
@@ -211,6 +212,79 @@ class MainWindow(QMainWindow):
         labels = [str(i) for i in range(n)]
         self.table.setVerticalHeaderLabels(labels)
 
+    @handle_exceptions
+    def next_step(self):
+        # First run
+        if self.settings.img_idx == -1:
+            self.display_next()
+
+        # Classification
+        if self.settings.classification_mode > 0 and self.settings.object_detection_mode == 0:
+            if self.classified:
+                self.save_result()
+                self.reset_state()
+                self.display_next()
+            self.hint_label.setText('Choose the image class')
+
+        # Localization
+        if self.settings.classification_mode == 0 and self.settings.object_detection_mode > 0:
+            if self.all_objects_localized:
+                self.save_result()
+                self.reset_state()
+                self.display_next()
+                self.hint_label.setText('Mark the {}'.format(self.settings.object_names[self.object_idx]))
+            else:
+                if self.settings.object_names:
+                    self.hint_label.setText('Mark the {}'.format(self.settings.object_names[self.object_idx]))
+                else:
+                    self.hint_label.setText('Mark next object')
+
+        # Localization + image classification
+        if self.settings.classification_mode == 1 and self.settings.object_detection_mode > 0:
+            if self.all_objects_localized:
+                if self.classified:
+                    self.save_result()
+                    self.reset_state()
+                    self.display_next()
+                    if self.settings.object_names:
+                        self.hint_label.setText('Mark the {}'.format(self.settings.object_names[self.object_idx]))
+                    else:
+                        self.hint_label.setText('Mark next object')
+                else:
+                    self.hint_label.setText('Choose the image class')
+
+        # Localization + location classification
+        if self.settings.classification_mode == 2 and self.settings.object_detection_mode > 0:
+            if self.all_objects_localized:
+                if self.classified:
+                    self.save_result()
+                    self.reset_state()
+                    self.display_next()
+                    if self.settings.object_names:
+                        self.hint_label.setText('Mark the {}'.format(self.settings.object_names[self.object_idx]))
+                    else:
+                        self.hint_label.setText('Mark next object')
+                else:
+                    self.hint_label.setText('Choose the object class')
+
+            else:
+                if self.one_object_localized:
+                    if self.classified:
+                        self.save_result()
+                        self.reset_state()
+                        self.display_next()
+                        if self.settings.object_names:
+                            self.hint_label.setText('Mark the {}'.format(self.settings.object_names[self.object_idx]))
+                        else:
+                            self.hint_label.setText('Mark next object')
+                    else:
+                        self.hint_label.setText('Choose the object class')
+                else:
+                    if self.settings.object_names:
+                        self.hint_label.setText('Mark the {}'.format(self.settings.object_names[self.object_idx]))
+                    else:
+                        self.hint_label.setText('Mark next object')
+
     @pyqtSlot()
     @handle_exceptions
     def display(self):
@@ -232,25 +306,22 @@ class MainWindow(QMainWindow):
     def reset_state(self):
         self.result_string = ''
         self.classified = False
+        self.one_object_localized = False
+        self.all_objects_localized = False
         if self.settings.object_detection_mode:
             self.set_buttons_enabled(False)
             self.object_idx = 0
-            self.locations = len(self.settings.object_names) * [False]
 
         self.checkbox_implants.setChecked(False)
         self.checkbox_reduction.setChecked(False)
         self.checkbox_surgery.setChecked(False)
         self.checkbox_other.setChecked(False)
 
-        self.objects_located = False
-
     @pyqtSlot()
     @handle_exceptions
     def display_next(self):
         self.settings.img_idx += 1
-        self.reset_state()
         if self.settings.img_idx < len(self.image_list):
-            self.display_hint()
             self.display()
         else:
             self.finito()
@@ -261,7 +332,6 @@ class MainWindow(QMainWindow):
         self.reset_state()
         self.settings.img_idx = int(self.line_image_idx.text()) - 1
         self.display()
-        self.display_hint()
 
     @pyqtSlot()
     @handle_exceptions
@@ -294,7 +364,6 @@ class MainWindow(QMainWindow):
 
         # display previous image
         self.display()
-        self.display_hint()
 
     @pyqtSlot()
     @handle_exceptions
@@ -340,9 +409,7 @@ class MainWindow(QMainWindow):
                 target_path = join(self.project_folder, self.settings.class_labels[class_nr], basename(src_path))
                 self.copy(src_path, target_path)
             self.classified = True
-            if self.is_ready():
-                self.save_result()
-                self.display_next()
+            self.next_step()
 
     @pyqtSlot()
     @handle_exceptions
@@ -351,8 +418,9 @@ class MainWindow(QMainWindow):
             return
 
         if self.settings.object_names:
-            self.locations[self.object_idx] = True
             self.object_idx += 1
+            if len(self.settings.object_names) == self.object_idx:
+                self.all_objects_localized = True
 
         if self.settings.object_detection_mode == 1:
             self.screen.draw_point('lawngreen')
@@ -360,23 +428,14 @@ class MainWindow(QMainWindow):
             self.screen.draw_rect()
 
         self.result_string += ',' + str(self.screen.location).strip('()')
+        self.one_object_localized = True
 
-        self.check_status_and_proceed()
-
-    @handle_exceptions
-    def check_status_and_proceed(self):
-        if self.is_ready():
-            self.save_result()
-            self.display_next()
-        elif self.objects_located or \
-                (self.settings.class_labels is not None and
-                 self.object_idx == len(self.settings.object_names)):
-            self.set_buttons_enabled(True)
+        self.next_step()
 
     @pyqtSlot()
     @handle_exceptions
-    def finish_location(self):
-        self.objects_located = True
+    def finish_localization(self):
+        self.all_objects_localized = True
         self.check_status_and_proceed()
 
     @handle_exceptions
@@ -423,18 +482,6 @@ class MainWindow(QMainWindow):
             file.write(filename + self.result_string + '\n')
 
     @handle_exceptions
-    def is_ready(self):
-        self.display_hint()
-
-        class_checked = (len(self.settings.class_labels) > 0)
-        object_checked = (self.settings.object_detection_mode > 0)
-        if self.settings.object_names:
-            self.objects_located = (self.object_idx == len(self.settings.object_names))
-        status = (self.classified or not class_checked) and (self.objects_located or not object_checked)
-
-        return status
-
-    @handle_exceptions
     def copy(self, src_path, target_path):
         process_thread = threading.Thread(target=copyfile, args=(src_path, target_path))
         process_thread.daemon = True
@@ -462,17 +509,6 @@ class MainWindow(QMainWindow):
             if class_checked and class_num < len(self.settings.class_labels):
                 self.classify(class_num)
         event.accept()
-
-    @handle_exceptions
-    def display_hint(self):
-        if self.settings.object_detection_mode > 0 and (self.object_idx < len(self.settings.object_names)):
-            self.hint_label.setText('Mark the {}'.format(self.settings.object_names[self.object_idx]))
-        elif self.settings.object_detection_mode > 0 and \
-                len(self.settings.object_names) == 0 and not \
-                self.objects_located:
-            self.hint_label.setText('Mark next object')
-        elif len(self.settings.class_labels):
-            self.hint_label.setText('Choose the class')
 
     @handle_exceptions
     def finito(self):

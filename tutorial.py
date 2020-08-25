@@ -139,6 +139,12 @@ class Tutorial:
             if self.project_creator_dialog.check_class.isChecked():
                 self.settings.class_labels = (self.project_creator_dialog.comboBox.currentIndex() + 2) * ['']
                 next_step = self.step_3
+                if self.project_creator_dialog.radio_image.isChecked():
+                    self.settings.classification_mode = 1
+                else:
+                    self.settings.classification_mode = 2
+            else:
+                self.settings.classification_mode = 0
 
             next_step()
 
@@ -168,7 +174,7 @@ class Tutorial:
             for j in range(len(self.settings.class_labels)):
                 label = self.project_creator_dialog.tableWidget.item(j, 1).text()
                 self.settings.class_labels[j] = label
-            if self.settings.object_detection_mode and self.settings.object_names1:
+            if self.settings.object_detection_mode and self.settings.object_names:
                 self.step_4()
             else:
                 self.finito()
