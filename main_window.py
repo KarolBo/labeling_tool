@@ -171,7 +171,7 @@ class MainWindow(QMainWindow):
         self.set_buttons_enabled(False)
 
         self.settings.img_idx -= 1
-        self.next_step()
+        self.next_step(first_run=True)
 
     @pyqtSlot()
     @handle_exceptions
@@ -214,9 +214,9 @@ class MainWindow(QMainWindow):
         self.table.setVerticalHeaderLabels(labels)
 
     @handle_exceptions
-    def next_step(self):
+    def next_step(self, first_run=False):
         # First run
-        if self.settings.img_idx == -1:
+        if first_run:
             self.display_next()
 
         # Classification
@@ -252,17 +252,17 @@ class MainWindow(QMainWindow):
         # Localization + location classification
         if self.settings.classification_mode == 2 and self.settings.object_detection_mode > 0:
             if self.all_objects_localized:
+                print(self.classified)
                 if self.classified:
                     self.save_result_and_proceed()
                     self.display_object_localization_hint()
                 else:
                     self.set_buttons_enabled(True)
-                    self.hint_label.setText('Choose the object class')
+                    self.hint_label.setText('aChoose the object class')
 
             else:
                 if self.one_object_localized:
                     if self.classified:
-                        self.classified = False
                         self.display_object_localization_hint()
                     else:
                         self.set_buttons_enabled(True)
