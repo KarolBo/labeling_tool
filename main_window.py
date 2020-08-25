@@ -221,17 +221,13 @@ class MainWindow(QMainWindow):
         # Classification
         if self.settings.classification_mode > 0 and self.settings.object_detection_mode == 0:
             if self.classified:
-                self.save_result()
-                self.reset_state()
-                self.display_next()
+                self.save_result_and_proceed()
             self.hint_label.setText('Choose the image class')
 
         # Localization
         if self.settings.classification_mode == 0 and self.settings.object_detection_mode > 0:
             if self.all_objects_localized:
-                self.save_result()
-                self.reset_state()
-                self.display_next()
+                self.save_result_and_proceed()
                 self.hint_label.setText('Mark the {}'.format(self.settings.object_names[self.object_idx]))
             else:
                 if self.settings.object_names:
@@ -243,13 +239,8 @@ class MainWindow(QMainWindow):
         if self.settings.classification_mode == 1 and self.settings.object_detection_mode > 0:
             if self.all_objects_localized:
                 if self.classified:
-                    self.save_result()
-                    self.reset_state()
-                    self.display_next()
-                    if self.settings.object_names:
-                        self.hint_label.setText('Mark the {}'.format(self.settings.object_names[self.object_idx]))
-                    else:
-                        self.hint_label.setText('Mark next object')
+                    self.save_result_and_proceed()
+                    self.display_object_localization_hint()
                 else:
                     self.hint_label.setText('Choose the image class')
 
@@ -257,33 +248,33 @@ class MainWindow(QMainWindow):
         if self.settings.classification_mode == 2 and self.settings.object_detection_mode > 0:
             if self.all_objects_localized:
                 if self.classified:
-                    self.save_result()
-                    self.reset_state()
-                    self.display_next()
-                    if self.settings.object_names:
-                        self.hint_label.setText('Mark the {}'.format(self.settings.object_names[self.object_idx]))
-                    else:
-                        self.hint_label.setText('Mark next object')
+                    self.save_result_and_proceed()
+                    self.display_object_localization_hint()
                 else:
                     self.hint_label.setText('Choose the object class')
 
             else:
                 if self.one_object_localized:
                     if self.classified:
-                        self.save_result()
-                        self.reset_state()
-                        self.display_next()
-                        if self.settings.object_names:
-                            self.hint_label.setText('Mark the {}'.format(self.settings.object_names[self.object_idx]))
-                        else:
-                            self.hint_label.setText('Mark next object')
+                        self.save_result_and_proceed()
+                        self.display_object_localization_hint()
                     else:
                         self.hint_label.setText('Choose the object class')
                 else:
-                    if self.settings.object_names:
-                        self.hint_label.setText('Mark the {}'.format(self.settings.object_names[self.object_idx]))
-                    else:
-                        self.hint_label.setText('Mark next object')
+                    self.display_object_localization_hint()
+
+    @handle_exceptions
+    def save_result_and_proceed(self):
+        self.save_result()
+        self.reset_state()
+        self.display_next()
+
+    @handle_exceptions
+    def display_object_localization_hint(self):
+        if self.settings.object_names:
+            self.hint_label.setText('Mark the {}'.format(self.settings.object_names[self.object_idx]))
+        else:
+            self.hint_label.setText('Mark next object')
 
     @pyqtSlot()
     @handle_exceptions
@@ -436,7 +427,7 @@ class MainWindow(QMainWindow):
     @handle_exceptions
     def finish_localization(self):
         self.all_objects_localized = True
-        self.check_status_and_proceed()
+        self.next_step()
 
     @handle_exceptions
     def create_result_file(self):
