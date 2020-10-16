@@ -10,10 +10,11 @@ from PyQt5.QtCore import pyqtSlot, Qt
 import pydicom
 from shutil import copyfile
 import threading
-from scipy.misc import imread
+from PIL import Image
 from tutorial import Tutorial
 from settings import Settings, handle_exceptions
 import subprocess
+import numpy as np
 
 
 class MainWindow(QMainWindow):
@@ -298,7 +299,8 @@ class MainWindow(QMainWindow):
             self.screen.val_min, self.screen.val_max = self.get_windowing(dcm_file)
             self.screen.data_array = dcm_file.pixel_array
         else:
-            self.screen.data_array = imread(self.image_list[self.settings.img_idx])
+            img = Image.open(self.image_list[self.settings.img_idx])
+            self.screen.data_array = np.array(img)
         self.screen.display()
 
         self.line_image_idx.setText(str(self.settings.img_idx + 1))

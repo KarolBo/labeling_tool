@@ -3,13 +3,13 @@
 block_cipher = None
 
 
-a = Analysis(['main_window.py'],
-             pathex=['/media/mrv6/ADATA SD700/labeling_tool'],
+a = Analysis(['../main_window.py'],
+             pathex=['/home/mrv6/SD700/labeling_tool'],
              binaries=[],
              datas=[
-			('/media/mrv6/ADATA SD700/labeling_tool/main_window.py', '.'),
-			('/media/mrv6/ADATA SD700/labeling_tool/mplwidget.py', '.'),
-			('/media/mrv6/ADATA SD700/labeling_tool/main_window.ui', '.')
+			('/home/mrv6/labeling_tool/main_window.py', '.'),
+			('/home/mrv6/labeling_tool/mplwidget.py', '.'),
+			('/home/mrv6/labeling_tool/main_window.ui', '.')
 			 ],
              hiddenimports=["matplotlib"],
              hookspath=[],
