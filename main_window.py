@@ -405,7 +405,7 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     @handle_exceptions
     def classify(self, class_nr):
-        if self.expected_action is not 'classification':
+        if self.expected_action != 'classification':
             return
 
         if self.settings.img_idx <= len(self.image_list):
