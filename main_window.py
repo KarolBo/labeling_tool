@@ -421,7 +421,7 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     @handle_exceptions
     def add_location(self):
-        if self.expected_action is not 'localization':
+        if self.expected_action != 'localization':
             return
 
         if self.settings.object_names:
