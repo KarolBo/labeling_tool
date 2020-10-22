@@ -294,6 +294,7 @@ class MainWindow(QMainWindow):
         self.filter_forward()
         if self.settings.file_extension == 'dcm':
             dcm_file_name = self.image_list[self.settings.img_idx]
+            self.label_filename.setText(basename(dcm_file_name))
             subprocess.call(("dcmdjpeg", dcm_file_name, dcm_file_name))
             dcm_file = pydicom.dcmread(dcm_file_name)
             self.screen.val_min, self.screen.val_max = self.get_windowing(dcm_file)

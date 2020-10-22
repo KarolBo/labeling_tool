@@ -244,7 +244,6 @@ background: #272727;</string>
            <string notr="true">background: #272727;
 border:1px solid  #ff655a;</string>
           </property>
-          <zorder>frame_3</zorder>
          </widget>
         </item>
         <item>
@@ -780,20 +779,14 @@ height:40px;
      </layout>
     </item>
     <item row="0" column="0">
-     <spacer name="verticalSpacer_2">
-      <property name="orientation">
-       <enum>Qt::Vertical</enum>
+     <widget class="QLabel" name="label_filename">
+      <property name="styleSheet">
+       <string notr="true">color:white;</string>
       </property>
-      <property name="sizeType">
-       <enum>QSizePolicy::Fixed</enum>
+      <property name="text">
+       <string/>
       </property>
-      <property name="sizeHint" stdset="0">
-       <size>
-        <width>20</width>
-        <height>5</height>
-       </size>
-      </property>
-     </spacer>
+     </widget>
     </item>
    </layout>
   </widget>
