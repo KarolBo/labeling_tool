@@ -838,6 +838,7 @@ height:40px;
     </widget>
     <addaction name="action_copy"/>
     <addaction name="menuFile_Type"/>
+    <addaction name="action_threshold"/>
    </widget>
    <addaction name="menuTools"/>
   </widget>
@@ -962,6 +963,14 @@ height:40px;
   <action name="actionCC">
    <property name="text">
     <string>CC</string>
+   </property>
+  </action>
+  <action name="action_threshold">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Thresholding</string>
    </property>
   </action>
  </widget>

@@ -70,6 +70,8 @@ class MainWindow(QMainWindow):
     def connect_signals(self):
         self.action_copy.triggered.connect(self.create_folders)
 
+        self.action_threshold.triggered.connect(self.display)
+
         self.button_save_roi.clicked.connect(self.add_location)
         self.button_skip.clicked.connect(self.display_next)
         self.button_skip_step.clicked.connect(self.skip_step)
@@ -298,7 +300,10 @@ class MainWindow(QMainWindow):
             subprocess.call(("dcmdjpeg", dcm_file_name, dcm_file_name))
             dcm_file = pydicom.dcmread(dcm_file_name)
             self.screen.val_min, self.screen.val_max = self.get_windowing(dcm_file)
-            self.screen.data_array = dcm_file.pixel_array
+            pixel_data = dcm_file.pixel_array
+            if self.action_threshold.isChecked():
+                pixel_data[pixel_data > self.screen.val_min] = self.screen.val_max
+            self.screen.data_array = pixel_data
         else:
             img = Image.open(self.image_list[self.settings.img_idx])
             self.screen.data_array = np.array(img)
