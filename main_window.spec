@@ -4,13 +4,13 @@ block_cipher = None
 
 
 a = Analysis(['main_window.py'],
-	pathex=['K:/labeling_tool'],
+	pathex=['C:/Users/Karol/PycharmProjects/labeling_tool'],
 	binaries=[],
 	datas=[
-		('K:/labeling_tool/*.py', '.'),
-		('K:/labeling_tool/mplwidget.py', '.'),
-		('K:/labeling_tool/*.ui', '.'),
-		('K:/labeling_tool/logo_b_rayZ.png', '.')
+		('C:/Users/Karol/PycharmProjects/labeling_tool/main_window.py', '.'),
+		('C:/Users/Karol/PycharmProjects/labeling_tool/mplwidget.py', '.'),
+		('C:/Users/Karol/PycharmProjects/labeling_tool/*.ui', '.'),
+		('C:/Users/Karol/PycharmProjects/labeling_tool/logo_b_rayZ.png', '.')
 	],
 	hiddenimports=["matplotlib", "pkg_resources.py2_warn"],
 	hookspath=[],
@@ -29,7 +29,7 @@ exe = EXE(pyz,
 	a.zipfiles,
 	a.datas,
 	[],
-	name='labeling_app',
+	name='main_window',
 	debug=False,
 	bootloader_ignore_signals=False,
 	strip=False,
