@@ -157,5 +157,5 @@ class MplWidget(QWidget):
         data = data.reshape((h, w, 3))
         indices = np.where(np.all(data == (0, 255, 255), axis=-1))
 
-        return list(zip(indices[0], indices[1]))
+        return list(zip(indices[0].tolist(), indices[1].tolist()))
                    

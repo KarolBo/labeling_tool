@@ -15,6 +15,7 @@ from tutorial import Tutorial
 from settings import Settings, handle_exceptions
 import subprocess
 import json
+import numpy as np
 
 
 class MainWindow(QMainWindow):
@@ -445,9 +446,10 @@ class MainWindow(QMainWindow):
         elif self.settings.object_detection_mode == 3:
             region = self.screen.draw_polygon()
             polygon_dict = {
+                'file': basename(self.image_list[self.settings.img_idx]),
                 'region': region
             }
-            path = join(self.settings.project_folder, f'{basename(self.image_list[self.settings.img_idx])}_region.json')
+            path = join(self.settings.project_folder, f'region_{self.settings.img_idx}.json')
             with open(path, 'w') as f:
                 json.dump(polygon_dict, f)
 
