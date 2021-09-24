@@ -27,7 +27,7 @@ class Settings:
         self.data_folder = ''
         self.class_labels = []
         self.classification_mode = 0  # 0 - none, 1 - class per image, 2 - class per location
-        self.object_detection_mode = 0  # 0 - none, 1 - point, 2 - square
+        self.object_detection_mode = 0  # 0 - none, 1 - point, 2 - square, 3 - polygon
         self.object_names = []
         self.img_idx = 0
         self.eval_cc = self.eval_mlo = self.eval_mammo = self.eval_tomo = True

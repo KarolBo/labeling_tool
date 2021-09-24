@@ -108,6 +108,7 @@ class Tutorial:
         def on_object_check(state):
             self.project_creator_dialog.radio_point.setEnabled(state)
             self.project_creator_dialog.radio_square.setEnabled(state)
+            self.project_creator_dialog.radio_polygon.setEnabled(state)
             self.project_creator_dialog.combo_obj_num.setEnabled(state)
             self.project_creator_dialog.label_2.setEnabled(state)
             self.project_creator_dialog.check_unlimited.setEnabled(state)
@@ -131,8 +132,10 @@ class Tutorial:
 
                 if self.project_creator_dialog.radio_point.isChecked():
                     self.settings.object_detection_mode = 1
-                else:
+                elif self.project_creator_dialog.radio_square.isChecked():
                     self.settings.object_detection_mode = 2
+                else:
+                    self.settings.object_detection_mode = 3
             else:
                 self.settings.object_detection_mode = 0
 

@@ -224,7 +224,7 @@
         <bool>false</bool>
        </property>
        <property name="text">
-        <string>classify location</string>
+        <string>classify each location</string>
        </property>
        <attribute name="buttonGroup">
         <string notr="true">buttonGroup_2</string>
@@ -338,7 +338,7 @@
           </font>
          </property>
          <property name="text">
-          <string>square</string>
+          <string>rectangle</string>
          </property>
          <property name="checked">
           <bool>false</bool>
@@ -346,6 +346,33 @@
          <attribute name="buttonGroup">
           <string notr="true">buttonGroup</string>
          </attribute>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="radio_polygon">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>30</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <family>Arial</family>
+           <pointsize>12</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>polygon</string>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
+         </property>
         </widget>
        </item>
       </layout>
@@ -567,7 +594,7 @@
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup"/>
   <buttongroup name="buttonGroup_2"/>
+  <buttongroup name="buttonGroup"/>
  </buttongroups>
 </ui>

@@ -10,6 +10,7 @@ class Mode(Enum):
     nothing = 0
     point = 1
     roi = 2
+    polygon = 3
 
 
 class MplWidget(QWidget):
@@ -39,6 +40,8 @@ class MplWidget(QWidget):
 
         self.rs = None
         self.location = None
+        self.polygon_x = None
+        self.polygon_y = None
         self.mode = Mode.nothing
 
         self.red_point = None
@@ -61,6 +64,10 @@ class MplWidget(QWidget):
             self.rs = RectangleSelector(self.canvas.axes, self.roi_select,
                                         drawtype='box', useblit=True, button=[1],
                                         minspanx=5, minspany=5, spancoords='pixels', interactive=True)
+        elif new_mode == Mode.polygon:
+            self.polygon_x = []
+            self.polygon_y = []
+
         self.mode = new_mode
 
     @handle_exceptions
@@ -105,17 +112,21 @@ class MplWidget(QWidget):
             self.x = event.xdata
             self.y = event.ydata
             button_number = event.button if type(event.button) is int else event.button.value
-            if (self.mode == Mode.point and
-                    button_number == 1):
-                x = self.x / self.data_array.shape[1]
-                y = self.y / self.data_array.shape[0]
-                self.location = (x, y)
-                self.draw_point('red')
+            if button_number == 1:
+                if self.mode == Mode.point:
+                    x = self.x / self.data_array.shape[1]
+                    y = self.y / self.data_array.shape[0]
+                    self.location = (x, y)
+                    self.draw_point('red') 
+                elif self.mode == Mode.polygon:
+                    self.polygon_x.append(self.x)
+                    self.polygon_y.append(self.y)
+                    self.draw_point('cyan', size=5)
 
-    def draw_point(self, color):
-        if self.location is None:
+    def draw_point(self, color, size=8):
+        if self.location is None and self.polygon_x is None:
             return
-        point = self.canvas.axes.scatter(self.x, self.y, c=color)
+        point = self.canvas.axes.scatter(self.x, self.y, c=color, s=size)
         if self.red_point is not None:
             self.red_point.remove()
             self.red_point = None
@@ -132,3 +143,9 @@ class MplWidget(QWidget):
                                  ymax=1-self.location[3],
                                  facecolor='g', alpha=0.5)
         self.canvas.draw()
+
+    def draw_polygon(self):
+        self.canvas.axes.fill(self.polygon_x, self.polygon_y)
+        self.canvas.draw()
+        self.polygon_x = []
+        self.polygon_y = []

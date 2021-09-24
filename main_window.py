@@ -442,8 +442,11 @@ class MainWindow(QMainWindow):
             self.screen.draw_point('lawngreen')
         elif self.settings.object_detection_mode == 2:
             self.screen.draw_rect()
+        elif self.settings.object_detection_mode == 3:
+            self.screen.draw_polygon()
 
-        self.result_string += ',' + str(self.screen.location).strip('()')
+        if self.settingfs.object_detection_mode != 3:
+            self.result_string += ',' + str(self.screen.location).strip('()')
         self.one_object_localized = True
         self.classified = False
 
