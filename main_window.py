@@ -14,7 +14,7 @@ from PIL import Image
 from tutorial import Tutorial
 from settings import Settings, handle_exceptions
 import subprocess
-import numpy as np
+import json
 
 
 class MainWindow(QMainWindow):
@@ -443,7 +443,14 @@ class MainWindow(QMainWindow):
         elif self.settings.object_detection_mode == 2:
             self.screen.draw_rect()
         elif self.settings.object_detection_mode == 3:
-            self.screen.draw_polygon()
+            region = self.screen.draw_polygon()
+            polygon_dict = {
+                'region': region
+            }
+            path = join(self.settings.project_folder, f'{basename(self.image_list[self.settings.img_idx])}_region.json')
+            with open(path, 'w') as f:
+                json.dump(polygon_dict, f)
+
 
         if self.settingfs.object_detection_mode != 3:
             self.result_string += ',' + str(self.screen.location).strip('()')

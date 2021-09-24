@@ -4,6 +4,7 @@ from matplotlib.figure import Figure
 from matplotlib.widgets import RectangleSelector
 from main_window import handle_exceptions
 from enum import Enum
+import numpy as np
 
 
 class Mode(Enum):
@@ -145,7 +146,16 @@ class MplWidget(QWidget):
         self.canvas.draw()
 
     def draw_polygon(self):
-        self.canvas.axes.fill(self.polygon_x, self.polygon_y)
+        self.canvas.axes.fill(self.polygon_x, self.polygon_y, c='cyan')
         self.canvas.draw()
+
         self.polygon_x = []
         self.polygon_y = []
+
+        data = np.fromstring(self.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+        w, h = self.canvas.get_width_height()
+        data = data.reshape((h, w, 3))
+        indices = np.where(np.all(data == (0, 255, 255), axis=-1))
+
+        return list(zip(indices[0], indices[1]))
+                   
