@@ -34,6 +34,7 @@ class MainWindow(QMainWindow):
         self.one_object_localized = False
         self.all_objects_localized = False
         self.object_idx = 0
+        self.polygons = [] 
 
         self.init_gui()
         self.connect_signals()
@@ -322,6 +323,7 @@ class MainWindow(QMainWindow):
         self.classified = False
         self.one_object_localized = False
         self.all_objects_localized = False
+        self.polygons = []
         if self.settings.object_detection_mode:
             self.set_buttons_enabled(False)
             self.object_idx = 0
@@ -420,6 +422,8 @@ class MainWindow(QMainWindow):
 
         if self.settings.img_idx <= len(self.image_list):
             print('you classified as:', class_nr)
+            if self.settings.object_detection_mode == 3:
+                self.polygons[-1]['class'] = class_nr
             self.result_string += ',' + str(class_nr)
             if self.settings.copy_files:
                 src_path = self.image_list[self.settings.img_idx]
@@ -444,17 +448,13 @@ class MainWindow(QMainWindow):
         elif self.settings.object_detection_mode == 2:
             self.screen.draw_rect()
         elif self.settings.object_detection_mode == 3:
-            region = self.screen.draw_polygon()
-            polygon_dict = {
-                'file': basename(self.image_list[self.settings.img_idx]),
-                'region': region
-            }
-            path = join(self.settings.project_folder, f'region_{self.settings.img_idx}.json')
-            with open(path, 'w') as f:
-                json.dump(polygon_dict, f)
+            region = self.screen.draw_polygon(len(self.polygons))
+            self.polygons.append( { 
+                    'class': '',
+                    'points': region
+                })
 
-
-        if self.settingfs.object_detection_mode != 3:
+        if self.settings.object_detection_mode != 3:
             self.result_string += ',' + str(self.screen.location).strip('()')
         self.one_object_localized = True
         self.classified = False
@@ -510,6 +510,14 @@ class MainWindow(QMainWindow):
             filename = basename(self.image_list[self.settings.img_idx])
             file.write(filename + self.result_string + '\n')
 
+        polygon_dict = {
+            'file': basename(self.image_list[self.settings.img_idx]),
+            'regions': self.polygons
+        }
+        path = join(self.settings.project_folder, f'region_{self.settings.img_idx}.json')
+        with open(path, 'w') as f:
+            json.dump(polygon_dict, f)
+
     @handle_exceptions
     def copy(self, src_path, target_path):
         process_thread = threading.Thread(target=copyfile, args=(src_path, target_path))
@@ -532,7 +540,8 @@ class MainWindow(QMainWindow):
             if class_checked:
                 self.classify(1)
         elif event.key() == 16777216:
-            self.closeEvent(None)
+            # self.closeEvent(None)
+            self.screen.reset_polygon()
         else:
             class_num = event.key() - 48
             if class_checked and class_num < len(self.settings.class_labels):

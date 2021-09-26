@@ -2,9 +2,12 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.widgets import RectangleSelector
+from matplotlib import cm
+from matplotlib.colors import to_rgb
 from main_window import handle_exceptions
 from enum import Enum
 import numpy as np
+
 
 
 class Mode(Enum):
@@ -43,6 +46,7 @@ class MplWidget(QWidget):
         self.location = None
         self.polygon_x = None
         self.polygon_y = None
+        self.polygon = []
         self.mode = Mode.nothing
 
         self.red_point = None
@@ -133,6 +137,8 @@ class MplWidget(QWidget):
             self.red_point = None
         if color == 'red':
             self.red_point = point
+        if color == 'cyan':
+            self.polygon.append(point)
         self.canvas.draw()
 
     def draw_rect(self):
@@ -145,8 +151,10 @@ class MplWidget(QWidget):
                                  facecolor='g', alpha=0.5)
         self.canvas.draw()
 
-    def draw_polygon(self):
-        self.canvas.axes.fill(self.polygon_x, self.polygon_y, c='cyan')
+    def draw_polygon(self, n):
+        color = cm.rainbow(np.linspace(0, 1, 50))[n]
+
+        self.canvas.axes.fill(self.polygon_x, self.polygon_y, c=color)
         self.canvas.draw()
 
         self.polygon_x = []
@@ -155,7 +163,15 @@ class MplWidget(QWidget):
         data = np.fromstring(self.canvas.tostring_rgb(), dtype=np.uint8, sep='')
         w, h = self.canvas.get_width_height()
         data = data.reshape((h, w, 3))
-        indices = np.where(np.all(data == (0, 255, 255), axis=-1))
+        c = [round(255 * ch) for ch in to_rgb(color)]
 
+        indices = np.where(np.all(data == c, axis=-1))
         return list(zip(indices[0].tolist(), indices[1].tolist()))
                    
+    def reset_polygon(self):
+        for a in self.polygon:
+            a.remove()
+        self.polygon = []
+        self.polygon_x = []
+        self.polygon_y = []
+        self.canvas.draw()
