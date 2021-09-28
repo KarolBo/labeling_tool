@@ -2,11 +2,11 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.widgets import RectangleSelector
-from matplotlib import cm
-from matplotlib.colors import to_rgb
 from main_window import handle_exceptions
 from enum import Enum
 import numpy as np
+import mahotas
+import matplotlib.pyplot as plt
 
 
 
@@ -124,8 +124,8 @@ class MplWidget(QWidget):
                     self.location = (x, y)
                     self.draw_point('red') 
                 elif self.mode == Mode.polygon:
-                    self.polygon_x.append(self.x)
-                    self.polygon_y.append(self.y)
+                    self.polygon_x.append(int(self.x))
+                    self.polygon_y.append(int(self.y))
                     self.draw_point('cyan', size=5)
 
     def draw_point(self, color, size=8):
@@ -151,22 +151,15 @@ class MplWidget(QWidget):
                                  facecolor='g', alpha=0.5)
         self.canvas.draw()
 
-    def draw_polygon(self, n):
-        color = cm.rainbow(np.linspace(0, 1, 50))[n]
-
-        self.canvas.axes.fill(self.polygon_x, self.polygon_y, c=color)
+    @handle_exceptions
+    def draw_polygon(self):
+        self.canvas.axes.fill(self.polygon_x, self.polygon_y, c='cyan')
         self.canvas.draw()
-
+        region = self.get_points_inside(self.polygon_x, self.polygon_y)
         self.polygon_x = []
         self.polygon_y = []
+        return region
 
-        data = np.fromstring(self.canvas.tostring_rgb(), dtype=np.uint8, sep='')
-        w, h = self.canvas.get_width_height()
-        data = data.reshape((h, w, 3))
-        c = [round(255 * ch) for ch in to_rgb(color)]
-
-        indices = np.where(np.all(data == c, axis=-1))
-        return list(zip(indices[0].tolist(), indices[1].tolist()))
                    
     def reset_polygon(self):
         for a in self.polygon:
@@ -175,3 +168,13 @@ class MplWidget(QWidget):
         self.polygon_x = []
         self.polygon_y = []
         self.canvas.draw()
+
+
+    @handle_exceptions
+    def get_points_inside(self, xs, ys):
+        poly = list(zip(xs, ys))
+        grid = np.zeros((self.data_array.shape[1], self.data_array.shape[0]), dtype=np.int8)
+        mahotas.polygon.fill_polygon(poly, grid)
+        indices = np.where(grid > 0)
+        indices = list(zip(indices[0].tolist(), indices[1].tolist()))
+        return indices

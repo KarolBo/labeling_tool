@@ -448,7 +448,7 @@ class MainWindow(QMainWindow):
         elif self.settings.object_detection_mode == 2:
             self.screen.draw_rect()
         elif self.settings.object_detection_mode == 3:
-            region = self.screen.draw_polygon(len(self.polygons))
+            region = self.screen.draw_polygon()
             self.polygons.append( { 
                     'class': '',
                     'points': region
@@ -510,13 +510,14 @@ class MainWindow(QMainWindow):
             filename = basename(self.image_list[self.settings.img_idx])
             file.write(filename + self.result_string + '\n')
 
-        polygon_dict = {
-            'file': basename(self.image_list[self.settings.img_idx]),
-            'regions': self.polygons
-        }
-        path = join(self.settings.project_folder, f'region_{self.settings.img_idx}.json')
-        with open(path, 'w') as f:
-            json.dump(polygon_dict, f)
+        if self.settings.object_detection_mode == 3:
+            polygon_dict = {
+                'file': basename(self.image_list[self.settings.img_idx]),
+                'regions': self.polygons
+            }
+            path = join(self.settings.project_folder, f'region_{self.settings.img_idx}.json')
+            with open(path, 'w') as f:
+                json.dump(polygon_dict, f)
 
     @handle_exceptions
     def copy(self, src_path, target_path):
