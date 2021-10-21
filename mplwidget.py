@@ -14,7 +14,8 @@ class Mode(Enum):
     nothing = 0
     point = 1
     roi = 2
-    polygon = 3
+    polygon_json = 3
+    polygon_img = 4
 
 
 class MplWidget(QWidget):
@@ -69,7 +70,7 @@ class MplWidget(QWidget):
             self.rs = RectangleSelector(self.canvas.axes, self.roi_select,
                                         drawtype='box', useblit=True, button=[1],
                                         minspanx=5, minspany=5, spancoords='pixels', interactive=True)
-        elif new_mode == Mode.polygon:
+        elif new_mode == Mode.polygon_json or new_mode == Mode.polygon_img:
             self.polygon_x = []
             self.polygon_y = []
 
@@ -123,7 +124,7 @@ class MplWidget(QWidget):
                     y = self.y / self.data_array.shape[0]
                     self.location = (x, y)
                     self.draw_point('red') 
-                elif self.mode == Mode.polygon:
+                elif self.mode == Mode.polygon_json or self.mode == Mode.polygon_img:
                     self.polygon_x.append(int(self.x))
                     self.polygon_y.append(int(self.y))
                     self.draw_point('cyan', size=5)
@@ -153,7 +154,7 @@ class MplWidget(QWidget):
 
     @handle_exceptions
     def draw_polygon(self):
-        self.canvas.axes.fill(self.polygon_x, self.polygon_y, c='cyan')
+        self.canvas.axes.fill(self.polygon_x, self.polygon_y, c='cyan', alpha=0.5)
         self.canvas.draw()
         region = self.get_points_inside(self.polygon_x, self.polygon_y)
         self.polygon_x = []

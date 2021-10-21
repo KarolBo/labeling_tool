@@ -299,10 +299,11 @@ class MainWindow(QMainWindow):
         if self.settings.file_extension == 'dcm':
             dcm_file_name = self.image_list[self.settings.img_idx]
             self.label_filename.setText(basename(dcm_file_name))
-            try:
-                subprocess.call(("dcmdjpeg", dcm_file_name, dcm_file_name))
-            except:
-                print('Decoding not possible. Please install DCMTK.')
+            if self.settings.decode:
+                try:
+                    subprocess.call(("dcmdjpeg", dcm_file_name, dcm_file_name))
+                except:
+                    print('Decoding not possible. Please install DCMTK.')
             dcm_file = pydicom.dcmread(dcm_file_name)
             self.screen.val_min, self.screen.val_max = self.get_windowing(dcm_file)
             pixel_data = dcm_file.pixel_array
@@ -422,7 +423,7 @@ class MainWindow(QMainWindow):
 
         if self.settings.img_idx <= len(self.image_list):
             print('you classified as:', class_nr)
-            if self.settings.object_detection_mode == 3:
+            if self.settings.object_detection_mode >= 3:
                 self.polygons[-1]['class'] = class_nr
             self.result_string += ',' + str(class_nr)
             if self.settings.copy_files:
@@ -447,14 +448,14 @@ class MainWindow(QMainWindow):
             self.screen.draw_point('lawngreen')
         elif self.settings.object_detection_mode == 2:
             self.screen.draw_rect()
-        elif self.settings.object_detection_mode == 3:
+        elif self.settings.object_detection_mode >= 3:
             region = self.screen.draw_polygon()
             self.polygons.append( { 
                     'class': '',
                     'points': region
                 })
 
-        if self.settings.object_detection_mode != 3:
+        if self.settings.object_detection_mode < 3:
             self.result_string += ',' + str(self.screen.location).strip('()')
         self.one_object_localized = True
         self.classified = False
@@ -518,6 +519,15 @@ class MainWindow(QMainWindow):
             path = join(self.settings.project_folder, f'region_{self.settings.img_idx}.json')
             with open(path, 'w') as f:
                 json.dump(polygon_dict, f)
+        elif self.settings.object_detection_mode == 4:
+            im = Image.new(mode="RGB", size=(self.screen.data_array.shape[1], 
+                                             self.screen.data_array.shape[0]))
+            for polygon in self.polygons:
+                for point in polygon['points']:
+                    im.putpixel(point, (255, 0, 0))
+            filename = basename(self.image_list[self.settings.img_idx]).split('.')[0]
+            path = join(self.settings.project_folder, filename) + '.png'
+            im.save(path)
 
     @handle_exceptions
     def copy(self, src_path, target_path):

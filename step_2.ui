@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>415</width>
-    <height>400</height>
+    <width>432</width>
+    <height>479</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -349,7 +349,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QRadioButton" name="radio_polygon">
+        <widget class="QRadioButton" name="radio_polygon_json">
          <property name="enabled">
           <bool>false</bool>
          </property>
@@ -368,7 +368,34 @@
           </font>
          </property>
          <property name="text">
-          <string>polygon</string>
+          <string>polygon json</string>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="radio_polygon_img">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>30</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <family>Arial</family>
+           <pointsize>12</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>polygon img</string>
          </property>
          <property name="checked">
           <bool>false</bool>
@@ -597,7 +624,7 @@
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup_2"/>
   <buttongroup name="buttonGroup"/>
+  <buttongroup name="buttonGroup_2"/>
  </buttongroups>
 </ui>
