@@ -47,8 +47,8 @@ class MainWindow(QMainWindow):
     @handle_exceptions
     def show_start_dialog(self):
         self.start_dialog = loadUi(join(self.folder, 'start_dialog.ui'))
-        self.start_dialog.setWindowFlags(self.start_dialog.windowFlags() | Qt.FramelessWindowHint
-                                         | Qt.WindowStaysOnTopHint | Qt.X11BypassWindowManagerHint)
+        # self.start_dialog.setWindowFlags(self.start_dialog.windowFlags() | Qt.FramelessWindowHint
+        #                                  | Qt.WindowStaysOnTopHint | Qt.X11BypassWindowManagerHint)
         self.start_dialog.button_new.clicked.connect(self.new_project)
         self.start_dialog.button_continue.clicked.connect(self.continue_project)
         self.start_dialog.show()
