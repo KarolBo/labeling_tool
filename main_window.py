@@ -525,7 +525,8 @@ class MainWindow(QMainWindow):
             for polygon in self.polygons:
                 for point in polygon['points']:
                     im.putpixel(point, (255, 0, 0))
-            filename = basename(self.image_list[self.settings.img_idx]).split('.')[0]
+            filename = basename(self.image_list[self.settings.img_idx])
+            filename = '.'.join(filename.split('.')[0:-1])
             path = join(self.settings.project_folder, filename) + '.png'
             im.save(path)
 
