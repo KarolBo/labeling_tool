@@ -44,7 +44,8 @@ class Tutorial:
             self.settings.file_extension = ext
 
         self.project_creator_dialog.radio_dicom.toggled.connect(lambda: set_extension('dcm'))
-        self.project_creator_dialog.radio_dicom.toggled.connect(lambda: set_extension('jpg'))
+        self.project_creator_dialog.radio_jpg.toggled.connect(lambda: set_extension('jpg'))
+        self.project_creator_dialog.radio_png.toggled.connect(lambda: set_extension('png'))
 
         self.project_creator_dialog.button_browse_project.clicked.connect(self.set_project_folder)
         self.project_creator_dialog.button_browse_data.clicked.connect(self.set_data_folder)
